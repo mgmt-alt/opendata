@@ -17,6 +17,7 @@ This directory contains reusable Python modules for loading, processing, and vis
   - `head2head_viz.py`: Head to head plot to compare two teams or players on key metrics
   - `sectioned_summary_table_viz.py`: Visualisation to compare multiple metrics against different players and organize them by custom categories
   - `build_dashboard_data.py`: Merges the three season-aggregate CSVs into one clean, analysis-ready row-per-player table / JSON
+  - `player_score.py`: Computes the **SkillCorner Score** — a transparent, position-relative composite that ranks players like a leaderboard (see the [walkthrough](visualization/output/README.md#-the-skillcorner-score--a-leaderboard-coefficient))
   - `build_dashboard.py`: Assembles the self-contained interactive **Season Explorer** dashboard (`output/season_dashboard.html`)
   - `season_figures.py`: Renders publication-quality static PNG figures (`assets/viz/`) from the season aggregates
   - `output/`: Generated dashboard + a [**README with a full walkthrough**](visualization/output/README.md) of the season visualizations

@@ -127,6 +127,32 @@
   .runbar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid)}
   .runseg{height:100%;border-right:2px solid var(--surface);cursor:pointer}
   .runseg:last-child{border-right:none}
+  /* leaderboard */
+  .formula{display:inline-block;background:var(--surface);border:1px solid var(--border);
+    border-radius:6px;padding:1px 7px;font-size:13px;white-space:nowrap}
+  .weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 22px;margin-bottom:12px}
+  .wctl{display:flex;flex-direction:column;gap:3px}
+  .wctl .top{display:flex;justify-content:space-between;align-items:baseline;font-size:13px}
+  .wctl .top .nm{font-weight:600}
+  .wctl .top .nm .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  .wctl .top .pc{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:700}
+  .wctl input[type=range]{width:100%;accent-color:var(--series-1)}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+  .presets .lab{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:2px}
+  .lb-row{display:grid;grid-template-columns:34px minmax(120px,1.4fr) 1fr 44px;align-items:center;gap:12px;
+    padding:6px 8px;border-radius:9px;cursor:pointer;transition:background .12s}
+  .lb-row:hover{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
+  .lb-row.head{cursor:default;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding-bottom:2px}
+  .lb-row.head:hover{background:none}
+  .lb-rank{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+  .lb-rank .up{color:var(--good);font-size:11px}
+  .lb-name{display:flex;flex-direction:column;min-width:0}
+  .lb-name .n{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-name .m{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid);width:100%}
+  .lb-seg{height:100%}
+  .lb-score{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .lb-more{margin-top:10px;text-align:center}
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
   .toolrow{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
   @media (max-width:560px){
@@ -155,6 +181,26 @@
     <input id="minMatches" type="range" min="1" max="20" value="3" style="width:120px">
     <span id="minMatchesV" style="font-size:13px;color:var(--ink-2);width:2ch">3</span>
   </div>
+
+  <!-- LEADERBOARD -->
+  <section id="lb-section">
+    <div class="sec-head">
+      <h2>The SkillCorner Score — season leaderboard</h2>
+      <p>One number per player, <strong>0–100</strong>. Every metric is ranked as a percentile
+        <em>within the player's position</em>, rolled into three sub-scores, then combined:
+        <span class="formula">Score = w<sub>A</sub>·Athletic + w<sub>P</sub>·Passing + w<sub>O</sub>·Off-ball</span>.
+        Drag the weights to re-rank the league around what you value.</p>
+    </div>
+    <div class="card">
+      <div class="weights" id="weights"></div>
+      <div class="presets" id="presets"></div>
+      <div class="legend" id="lbLegend"></div>
+      <div id="leaderboard"></div>
+      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in all three facets.
+        Percentiles are computed against the full positional pool, so a player's standing never depends on the filter.
+        Click any row to load that player's profile below.</div>
+    </div>
+  </section>
 
   <!-- ATHLETIC SCATTER -->
   <section>
@@ -542,8 +588,131 @@ function renderRunMix(){
     `<span class="item"><span class="swatch" style="background:${RUN_COLORS[i]}"></span>${f}</span>`).join('');
 }
 
+// ---------- SKILLCORNER SCORE ----------
+const SCORE_GROUPS={
+  'Athletic':['top_speed','m_per_min','distance','hsr_dist','sprints','hi_count','high_accel'],
+  'Passing':['pass_vol','pass_pct','pass_over','linebreaks','dangerous_passes'],
+  'Off-ball':['runs','dangerous_runs','runs_received'],
+};
+const SCORE_KEYS=Object.keys(SCORE_GROUPS);
+const SCORE_COLORS={'Athletic':'var(--c1)','Passing':'var(--c2)','Off-ball':'var(--c3)'};
+// precompute percentile of each metric within each player's position group (full pool)
+(function computePercentiles(){
+  const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
+  const allMetrics=[...new Set(Object.values(SCORE_GROUPS).flat())];
+  for(const pos in byPos){
+    const rows=byPos[pos];
+    allMetrics.forEach(m=>{
+      const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+      rows.forEach(r=>{
+        if(r[m]==null){r['pct__'+m]=null;return;}
+        // average rank percentile (matches pandas rank(pct=True))
+        let lo=vals.indexOf(r[m]),hi=vals.lastIndexOf(r[m]);
+        r['pct__'+m]=((lo+hi)/2+1)/vals.length*100;
+      });
+    });
+  }
+  DATA.forEach(d=>{
+    SCORE_KEYS.forEach(g=>{
+      const ps=SCORE_GROUPS[g].map(m=>d['pct__'+m]).filter(v=>v!=null);
+      d['sub__'+g]=ps.length?ps.reduce((a,b)=>a+b,0)/ps.length:null;
+    });
+  });
+})();
+const weightState={'Athletic':1,'Passing':1,'Off-ball':1};
+function overallScore(d,w){
+  let num=0,den=0;
+  SCORE_KEYS.forEach(g=>{const s=d['sub__'+g];if(s!=null){num+=w[g]*s;den+=w[g];}});
+  return den>0?num/den:null;
+}
+const LB_PRESETS={
+  'Balanced':{Athletic:1,Passing:1,'Off-ball':1},
+  'Athlete':{Athletic:3,Passing:1,'Off-ball':1},
+  'Playmaker':{Athletic:1,Passing:3,'Off-ball':1},
+  'Runner':{Athletic:1,Passing:1,'Off-ball':3},
+  'Creator':{Athletic:1,Passing:2,'Off-ball':2},
+};
+let lbLimit=15;
+function normW(){const s=SCORE_KEYS.reduce((a,g)=>a+weightState[g],0)||1;
+  const o={};SCORE_KEYS.forEach(g=>o[g]=weightState[g]/s);return o;}
+function renderLeaderboard(){
+  const w=normW();
+  const elig=DATA.filter(d=>state.positions.has(d.position_group)&&d.matches>=state.minMatches
+    &&SCORE_KEYS.every(g=>d['sub__'+g]!=null));
+  elig.forEach(d=>d._score=overallScore(d,w));
+  elig.sort((a,b)=>b._score-a._score);
+  const box=document.getElementById('leaderboard');box.innerHTML='';
+  const head=el('div',{class:'lb-row head'},[
+    el('div',{class:'lb-rank',text:'#'}),el('div',{text:'Player'}),
+    el('div',{text:'Athletic · Passing · Off-ball'}),el('div',{class:'lb-score',text:'Score'})]);
+  box.appendChild(head);
+  const show=elig.slice(0,lbLimit);
+  const maxS=show.length?show[0]._score:100;
+  show.forEach((d,i)=>{
+    const row=el('div',{class:'lb-row'});
+    row.appendChild(el('div',{class:'lb-rank',text:(i+1)}));
+    row.appendChild(el('div',{class:'lb-name'},[
+      el('div',{class:'n',text:d.player_short_name}),
+      el('div',{class:'m',text:`${d.position_group} · ${d.team_short} · ${d.matches} matches`})]));
+    // stacked contribution bar (weighted parts sum to score); scaled to leader
+    const bar=el('div',{class:'lb-bar'});
+    SCORE_KEYS.forEach(g=>{
+      const part=w[g]*d['sub__'+g];
+      const seg=el('div',{class:'lb-seg'});
+      seg.style.width=(part/maxS*100)+'%';seg.style.background=SCORE_COLORS[g];
+      seg.title=`${g}: ${fmt(d['sub__'+g],0)}`;
+      seg.addEventListener('mouseenter',ev=>showTip(
+        `<b>${d.player_short_name}</b><div class="pos">${g} percentile</div>
+         <div class="row"><span>Sub-score</span><b>${fmt(d['sub__'+g],0)}</b></div>
+         <div class="row"><span>Weight</span><b>${Math.round(w[g]*100)}%</b></div>`,ev));
+      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);
+      bar.appendChild(seg);
+    });
+    row.appendChild(bar);
+    row.appendChild(el('div',{class:'lb-score',text:fmt(d._score,1)}));
+    row.onclick=()=>{const sel=document.getElementById('playerSelect');sel.value=d.player_id;
+      renderProfile();document.getElementById('profile').scrollIntoView({behavior:'smooth',block:'center'});};
+    box.appendChild(row);
+  });
+  const more=el('div',{class:'lb-more'});
+  if(lbLimit<elig.length){const b=el('button',{class:'toolbtn',text:`Show more (${elig.length-lbLimit} more)`});
+    b.onclick=()=>{lbLimit+=15;renderLeaderboard();};more.appendChild(b);}
+  if(lbLimit>15){const b=el('button',{class:'toolbtn',text:'Show less',style:'margin-left:8px'});
+    b.onclick=()=>{lbLimit=15;renderLeaderboard();};more.appendChild(b);}
+  box.appendChild(more);
+  // reflect weights in slider labels
+  SCORE_KEYS.forEach(g=>{const pc=document.getElementById('wpc-'+g);if(pc)pc.textContent=Math.round(w[g]*100)+'%';});
+}
+(function buildWeightUI(){
+  const box=document.getElementById('weights');
+  SCORE_KEYS.forEach(g=>{
+    const ctl=el('div',{class:'wctl'});
+    ctl.appendChild(el('div',{class:'top'},[
+      el('span',{class:'nm',html:`<span class="dot" style="background:${SCORE_COLORS[g]}"></span>${g}`}),
+      el('span',{class:'pc',id:'wpc-'+g})]));
+    const r=el('input',{type:'range',min:'0',max:'100',value:'50',step:'5',id:'w-'+g});
+    r.oninput=()=>{weightState[g]=+r.value;markPreset(null);renderLeaderboard();};
+    ctl.appendChild(r);box.appendChild(ctl);
+  });
+  const pbox=document.getElementById('presets');
+  pbox.appendChild(el('span',{class:'lab',text:'Presets'}));
+  Object.keys(LB_PRESETS).forEach(name=>{
+    const c=el('button',{class:'chip',text:name,'aria-pressed':name==='Balanced'});
+    c.onclick=()=>{const p=LB_PRESETS[name];SCORE_KEYS.forEach(g=>{weightState[g]=p[g]*25;
+      document.getElementById('w-'+g).value=p[g]*25;});markPreset(name);renderLeaderboard();};
+    pbox.appendChild(c);
+  });
+  document.getElementById('lbLegend').innerHTML=SCORE_KEYS.map(g=>
+    `<span class="item"><span class="swatch" style="background:${SCORE_COLORS[g]}"></span>${g}</span>`).join('')
+    +`<span class="item" style="color:var(--muted)">segment length = weighted contribution</span>`;
+  // init sliders to balanced
+  SCORE_KEYS.forEach(g=>{weightState[g]=25;document.getElementById('w-'+g).value=25;});
+})();
+function markPreset(name){document.querySelectorAll('#presets .chip').forEach(c=>
+  c.setAttribute('aria-pressed',c.textContent===name));}
+
 // ---------- render all ----------
-function renderAll(){renderAthletic();renderPassing();renderRunMix();}
+function renderAll(){renderLeaderboard();renderAthletic();renderPassing();renderRunMix();}
 renderAll();renderProfile();renderTeams();
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
 </script>

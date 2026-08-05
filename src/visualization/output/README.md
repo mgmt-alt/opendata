@@ -11,9 +11,44 @@ There are two deliverables:
 
 1. **`season_dashboard.html`** — a single, self-contained interactive dashboard
    (no build step, no network calls; just open it in a browser). Filter by
-   position, search any player, sort tables, and hover every mark.
+   position, search any player, sort tables, re-weight the leaderboard, and hover
+   every mark.
 2. **Static PNG figures** in [`assets/viz/`](../../../assets/viz/) — the
    print/README companions below.
+
+---
+
+## 🏅 The SkillCorner Score — a leaderboard coefficient
+
+A single **0–100** rating per player so you can rank the league. It is deliberately
+transparent:
+
+1. Each metric becomes a **percentile within the player's position group** (a defender
+   is only ever compared to defenders).
+2. Those percentiles roll up into three **sub-scores** — Athletic, Passing, Off-ball —
+   each the mean of its metrics' percentiles.
+3. The **Overall Score** is a weighted average of the three:
+
+   > **Score = wₐ · Athletic + wₚ · Passing + wₒ · Off-ball**
+
+   with the weights renormalised over whichever facets a player has data for.
+
+In the dashboard the three weights are **live sliders** (plus presets — *Balanced,
+Athlete, Playmaker, Runner, Creator*), so you can re-rank the league around what you
+value. Only players with **3+ matches** and data in all three facets are ranked.
+The full ranking is also exported to
+[`season_leaderboard.csv`](season_leaderboard.csv).
+
+![Season leaderboard](../../../assets/viz/leaderboard.png)
+
+```python
+from src.visualization.build_dashboard_data import load_merged
+from src.visualization.player_score import compute_scores, leaderboard
+
+df = load_merged()
+compute_scores(df, weights={"Athletic": 1, "Passing": 2, "Off-ball": 2})  # tilt to creators
+print(leaderboard(df, 20))                                                # tidy top-20
+```
 
 ---
 
@@ -57,6 +92,9 @@ python -m src.visualization.build_dashboard      # -> output/season_dashboard.ht
 
 # 3. Render the static PNG figures
 python -m src.visualization.season_figures        # -> assets/viz/*.png
+
+# (optional) export just the ranked leaderboard CSV
+python -m src.visualization.player_score          # -> output/season_leaderboard.csv
 ```
 
 ## Design notes

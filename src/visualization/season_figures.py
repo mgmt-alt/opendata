@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 from src.visualization.build_dashboard_data import load_merged, RUN_FAMILIES  # noqa: F401
+from src.visualization.player_score import compute_scores, METRIC_GROUPS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "assets" / "viz"
@@ -186,6 +187,47 @@ def fig_profile(df, player_name=None):
     _save(fig, "player_profile.png")
 
 
+def fig_leaderboard(df, n=20):
+    """Top-n SkillCorner Score leaderboard, each bar split into the three weighted
+    sub-score contributions (Athletic + Passing + Off-ball) that sum to the score."""
+    ranked = compute_scores(df).head(n).iloc[::-1]  # best at top
+    groups = list(METRIC_GROUPS)                     # Athletic, Passing, Off-ball
+    colors = {"Athletic": CAT[0], "Passing": CAT[1], "Off-ball": CAT[2]}
+    contrib = {g: ranked[f"score__{g}"].to_numpy() / len(groups) for g in groups}
+
+    fig, ax = plt.subplots(figsize=(11, 8.5))
+    y = np.arange(len(ranked))
+    left = np.zeros(len(ranked))
+    for g in groups:
+        ax.barh(y, contrib[g], left=left, height=0.66, color=colors[g],
+                edgecolor=SURFACE, linewidth=1.2, zorder=3, label=g)
+        left += contrib[g]
+    # overall score at bar end
+    for yi, tot in zip(y, left):
+        ax.text(tot + 0.6, yi, f"{tot:.1f}", va="center", ha="left",
+                fontsize=10, fontweight="bold", color=INK)
+    labels = [f"{int(r.rank)}. {r.player_name}  ·  {r.team_short}"
+              for r in ranked.itertuples()]
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=9.5, color=INK2)
+    ax.set_xlim(0, max(left) + 5)
+    ax.set_xlabel("SkillCorner Score  (0–100, equal weights)", fontsize=10)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.tick_params(left=False)
+    ax.grid(True, axis="x", color=GRID, linewidth=0.8, zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=3, frameon=False,
+              fontsize=10, handlelength=1.1, columnspacing=1.8)
+    ax.set_title("A-League 2024/25 leaderboard — the SkillCorner Score",
+                 fontsize=16, fontweight="bold", color=INK, loc="left", pad=26)
+    ax.text(0, 1.02, "Composite of position-relative percentiles across physical, "
+            "passing & off-ball metrics · 3+ matches",
+            transform=ax.transAxes, fontsize=10.5, color=INK2)
+    fig.text(0.99, 0.005, CREDIT, ha="right", fontsize=8, color=MUTED)
+    fig.tight_layout(rect=[0, 0.05, 1, 0.95])
+    _save(fig, "leaderboard.png")
+
+
 def _save(fig, name):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / name
@@ -197,6 +239,7 @@ def _save(fig, name):
 def main():
     df = load_merged()
     print(f"Loaded {len(df)} players. Rendering figures ->")
+    fig_leaderboard(df)
     fig_athletic(df)
     fig_passing(df)
     fig_profile(df)
