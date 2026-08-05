@@ -1,0 +1,549 @@
+<title>A-League 2024/25 — SkillCorner Season Explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#ffffff;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --series-1:#2a78d6;         /* blue */
+    --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;   /* diverging */
+    --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300;
+    --good:#006300;
+    --shadow:0 1px 2px rgba(11,11,11,.05),0 4px 16px rgba(11,11,11,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme:dark;
+      --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1e;
+      --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --series-1:#3987e5;
+      --pos:#3987e5; --neg:#e66767; --mid:#383835;
+      --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300;
+      --good:#0ca30c;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1e;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --series-1:#3987e5;
+    --pos:#3987e5; --neg:#e66767; --mid:#383835;
+    --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300;
+    --good:#0ca30c;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 20px 72px}
+  header.top{margin-bottom:8px}
+  .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  h1{font-size:clamp(24px,4vw,38px);line-height:1.12;margin:.25em 0 .15em;font-weight:700}
+  .sub{color:var(--ink-2);font-size:15px;max-width:70ch}
+  a{color:var(--series-1)}
+  section{margin-top:40px}
+  .sec-head h2{font-size:20px;margin:0 0 2px;font-weight:650}
+  .sec-head p{margin:0 0 14px;color:var(--ink-2);font-size:14px;max-width:78ch}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px 18px 14px;box-shadow:var(--shadow)}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .v{font-size:30px;font-weight:700;letter-spacing:-.01em;line-height:1}
+  .kpi .l{font-size:12.5px;color:var(--ink-2);margin-top:6px}
+  .kpi .u{font-size:12px;color:var(--muted)}
+  /* filter bar */
+  .filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+    position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--page) 88%,transparent);
+    backdrop-filter:blur(8px);padding:12px 6px;border-bottom:1px solid var(--border);margin-top:28px}
+  .filters .lab{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer;user-select:none;transition:.12s}
+  .chip[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
+  .chip:hover{border-color:var(--series-1)}
+  select,input[type=search]{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink)}
+  .toolbtn{font:inherit;font-size:13px;padding:5px 12px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer}
+  .toolbtn[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
+  /* chart */
+  .chart-wrap{width:100%;overflow-x:auto}
+  svg{display:block;max-width:100%;height:auto;font-family:inherit}
+  .axis text{fill:var(--muted);font-size:11px}
+  .axis-title{fill:var(--ink-2);font-size:12px;font-weight:600}
+  .gridline{stroke:var(--grid);stroke-width:1;shape-rendering:crispEdges}
+  .baseline{stroke:var(--axis);stroke-width:1;shape-rendering:crispEdges}
+  .dot{stroke:var(--surface);stroke-width:1.5;cursor:pointer}
+  .dot.dim{opacity:.16}
+  .dlabel{fill:var(--ink);font-size:11px;font-weight:600;pointer-events:none;paint-order:stroke;
+    stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:2px 0 12px;font-size:12.5px;color:var(--ink-2)}
+  .legend .item{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .caption{font-size:12px;color:var(--muted);margin-top:8px}
+  /* tooltip */
+  .tt{position:fixed;pointer-events:none;z-index:50;background:var(--surface-2);color:var(--ink);
+    border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12.5px;
+    box-shadow:var(--shadow);max-width:240px;opacity:0;transition:opacity .08s}
+  .tt b{font-size:13px}
+  .tt .row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
+  .tt .row b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .tt .pos{color:var(--muted);font-size:11.5px;margin-top:1px}
+  /* profile */
+  .profile-grid{display:grid;grid-template-columns:1fr;gap:4px}
+  .pf-group{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin:14px 0 4px}
+  .pf-row{display:grid;grid-template-columns:150px 1fr 46px;align-items:center;gap:10px;padding:3px 0}
+  .pf-lab{font-size:13px;color:var(--ink-2);text-align:right}
+  .pf-track{position:relative;height:22px;background:var(--grid);border-radius:6px;overflow:hidden}
+  .pf-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--axis)}
+  .pf-fill{position:absolute;top:0;bottom:0;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1),left .5s}
+  .pf-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .pf-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:2px}
+  .pf-head .name{font-size:20px;font-weight:700}
+  .pf-head .meta{font-size:13px;color:var(--ink-2)}
+  /* team bars */
+  .tbar-row{display:grid;grid-template-columns:140px 1fr 52px;align-items:center;gap:10px;padding:2.5px 0}
+  .tbar-lab{font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbar-track{height:20px;position:relative}
+  .tbar-fill{height:100%;background:var(--series-1);border-radius:0 5px 5px 0;transition:width .5s}
+  .tbar-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  /* table view */
+  .tableview{overflow-x:auto;margin-top:10px;display:none}
+  .tableview.show{display:block}
+  table{border-collapse:collapse;font-size:12.5px;width:100%}
+  th,td{text-align:right;padding:5px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+  th{color:var(--muted);font-weight:600;cursor:pointer}
+  td{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+  .runmix-row{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:10px;padding:3px 0}
+  .runmix-lab{font-size:12.5px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .runbar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid)}
+  .runseg{height:100%;border-right:2px solid var(--surface);cursor:pointer}
+  .runseg:last-child{border-right:none}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+  .toolrow{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
+  @media (max-width:560px){
+    .pf-row{grid-template-columns:110px 1fr 40px}
+    .pf-lab{font-size:12px}
+    .tbar-row{grid-template-columns:104px 1fr 46px}
+    .runmix-row{grid-template-columns:96px 1fr}
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">SkillCorner × PySport · Open Broadcast Tracking Data</div>
+    <h1>A-League 2024/25 — Season Explorer</h1>
+    <p class="sub">Physical output, passing quality and off-ball movement for every player with 60+ minutes in
+      Australia's top flight, built from SkillCorner's season aggregates. All rate stats are normalised
+      (physical per match; passing &amp; runs per 30 minutes in possession).</p>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="filters">
+    <span class="lab">Position</span>
+    <div class="chips" id="posChips"></div>
+    <span class="lab" style="margin-left:auto">Min matches</span>
+    <input id="minMatches" type="range" min="1" max="20" value="3" style="width:120px">
+    <span id="minMatchesV" style="font-size:13px;color:var(--ink-2);width:2ch">3</span>
+  </div>
+
+  <!-- ATHLETIC SCATTER -->
+  <section>
+    <div class="sec-head">
+      <h2>The athletic map</h2>
+      <p>Peak sprint speed against work rate (metres covered per minute). Top-right players are
+        both fast and relentless. Filter by position above; hover any dot for detail.</p>
+    </div>
+    <div class="card">
+      <div class="toolrow">
+        <div class="legend" id="scatterLegend"></div>
+        <button class="toolbtn" data-table="athletic" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-wrap"><svg id="athletic"></svg></div>
+      <div class="tableview" id="athletic-table"></div>
+      <div class="caption">Peak sprint speed = PSV99 (99th-percentile of a player's short-window speeds), in km/h.</div>
+    </div>
+  </section>
+
+  <!-- PASSING SCATTER -->
+  <section>
+    <div class="sec-head">
+      <h2>Passers: volume, security &amp; risk</h2>
+      <p>Pass volume against completion rate. Colour shows whether a player completes <em>more</em> than
+        expected given pass difficulty (blue) or <em>fewer</em> (red) — SkillCorner's xPass model sets the bar.</p>
+    </div>
+    <div class="card">
+      <div class="toolrow">
+        <div class="legend" id="passLegend"></div>
+        <button class="toolbtn" data-table="passing" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-wrap"><svg id="passing"></svg></div>
+      <div class="tableview" id="passing-table"></div>
+    </div>
+  </section>
+
+  <!-- PLAYER PROFILE -->
+  <section>
+    <div class="sec-head">
+      <h2>Player profile</h2>
+      <p>Percentile ranks against positional peers across the league. The centre line is the positional
+        median; bars to the right (blue) are above average, to the left (red) below.</p>
+    </div>
+    <div class="card">
+      <div class="toolrow">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input id="playerSearch" type="search" placeholder="Search player…" list="playerList" autocomplete="off">
+          <datalist id="playerList"></datalist>
+          <select id="playerSelect"></select>
+        </div>
+        <span id="peerCount" style="font-size:12.5px;color:var(--muted)"></span>
+      </div>
+      <div class="pf-head" id="pfHead"></div>
+      <div class="profile-grid" id="profile"></div>
+    </div>
+  </section>
+
+  <!-- TEAM OUTPUT -->
+  <section>
+    <div class="sec-head">
+      <h2>Team physical output</h2>
+      <p>Squad averages (players with 60+ minutes). Toggle the metric to reorder.</p>
+    </div>
+    <div class="card">
+      <div class="toolrow">
+        <div class="chips" id="teamMetric"></div>
+      </div>
+      <div id="teamBars"></div>
+      <div class="caption" id="teamCaption"></div>
+    </div>
+  </section>
+
+  <!-- RUN MIX -->
+  <section>
+    <div class="sec-head">
+      <h2>How the top runners move</h2>
+      <p>The 14 most active off-ball runners (per 30 min in possession) and the make-up of their runs
+        across six movement families. Filtered by position.</p>
+    </div>
+    <div class="card">
+      <div class="legend" id="runLegend"></div>
+      <div id="runMix"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>Data:</strong> SkillCorner &amp; PySport open broadcast tracking data — AUS A-League 2024/25 season aggregates
+      (Physical, Passing, Off-Ball Runs), filtered to performances of 60+ minutes.
+      Each player is shown in their primary position (most minutes). One row per player.</p>
+    <p>Built with the SkillCorner open dataset. Credit SkillCorner if you reuse this —
+      <a href="https://skillcorner.com">skillcorner.com</a>.</p>
+  </footer>
+</div>
+
+<div class="tt" id="tt"></div>
+
+<script>
+const PAYLOAD = __SEASON_DATA__;
+const DATA = PAYLOAD.players;
+const META = PAYLOAD.meta;
+const RUN_FAMILIES = META.run_families;
+const RUN_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+const SVGNS='http://www.w3.org/2000/svg';
+const fmt=(v,d=1)=>v==null?'—':(+v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const el=(t,a={},kids=[])=>{const e=document.createElementNS(t.startsWith('svg:')?SVGNS:'http://www.w3.org/1999/xhtml',t.replace('svg:',''));
+  for(const k in a){if(k==='text')e.textContent=a[k];else if(k==='html')e.innerHTML=a[k];else e.setAttribute(k,a[k]);}
+  (Array.isArray(kids)?kids:[kids]).forEach(c=>c&&e.appendChild(c));return e;};
+const S=(t,a={},kids=[])=>el('svg:'+t,a,kids);
+
+// ---------- state ----------
+const state={positions:new Set(META.positions),minMatches:3};
+
+// ---------- KPIs ----------
+(function(){
+  const valid=DATA.filter(d=>d.top_speed!=null);
+  const fastest=valid.reduce((a,b)=>b.top_speed>a.top_speed?b:a);
+  const avgDist=DATA.reduce((s,d)=>s+(d.distance||0),0)/DATA.length;
+  const grinder=DATA.reduce((a,b)=>(b.m_per_min||0)>(a.m_per_min||0)?b:a);
+  const tiles=[
+    {v:META.n_players,l:'Players profiled',u:'60+ min'},
+    {v:META.n_teams,l:'A-League clubs'},
+    {v:'10',l:'Matches with full tracking'},
+    {v:fmt(fastest.top_speed,1),l:'Fastest sprint · '+fastest.player_short_name,u:'km/h'},
+    {v:fmt(avgDist/1000,1),l:'Avg distance / match',u:'km'},
+  ];
+  const box=document.getElementById('kpis');
+  tiles.forEach(t=>box.appendChild(el('div',{class:'kpi'},[
+    el('div',{class:'v',html:t.v+(t.u?` <span class="u">${t.u}</span>`:'')}),
+    el('div',{class:'l',text:t.l})
+  ])));
+})();
+
+// ---------- filter chips ----------
+(function(){
+  const box=document.getElementById('posChips');
+  META.positions.forEach(p=>{
+    const c=el('button',{class:'chip','aria-pressed':'true',text:p});
+    c.onclick=()=>{state.positions.has(p)?state.positions.delete(p):state.positions.add(p);
+      if(state.positions.size===0)state.positions.add(p);
+      c.setAttribute('aria-pressed',state.positions.has(p));renderAll();};
+    box.appendChild(c);
+  });
+  const mm=document.getElementById('minMatches');
+  mm.oninput=()=>{state.minMatches=+mm.value;document.getElementById('minMatchesV').textContent=mm.value;renderAll();};
+})();
+const filtered=()=>DATA.filter(d=>state.positions.has(d.position_group)&&d.matches>=state.minMatches);
+
+// ---------- tooltip ----------
+const tt=document.getElementById('tt');
+function showTip(html,ev){tt.innerHTML=html;tt.style.opacity=1;moveTip(ev);}
+function moveTip(ev){const p=12,w=tt.offsetWidth,h=tt.offsetHeight;
+  let x=ev.clientX+p,y=ev.clientY+p;
+  if(x+w>innerWidth-8)x=ev.clientX-w-p; if(y+h>innerHeight-8)y=ev.clientY-h-p;
+  tt.style.left=x+'px';tt.style.top=y+'px';}
+function hideTip(){tt.style.opacity=0;}
+
+// ---------- generic scatter ----------
+function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip}){
+  const svg=document.getElementById(svgId);svg.textContent='';
+  const W=Math.min(svg.parentElement.clientWidth||900,1040),H=Math.round(W*0.56);
+  const m={l:52,r:18,t:12,b:46};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const xs=rows.map(x),ys=rows.map(y).filter(v=>v!=null);
+  const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+  const px=W-m.r,py0=H-m.b;
+  const padX=(xmax-xmin)*0.05||1,padY=(ymax-ymin)*0.08||1;
+  const X=v=>m.l+((v-(xmin-padX))/((xmax+padX)-(xmin-padX)))*(px-m.l);
+  const Y=v=>py0-((v-(ymin-padY))/((ymax+padY)-(ymin-padY)))*(py0-m.t);
+  const g=S('g');svg.appendChild(g);
+  const ticks=(a,b,n=5)=>{const step=(b-a)/n,out=[];for(let i=0;i<=n;i++)out.push(a+step*i);return out;};
+  // grid + axes
+  ticks(ymin-padY,ymax+padY).forEach(t=>{
+    g.appendChild(S('line',{class:'gridline',x1:m.l,x2:px,y1:Y(t).toFixed(1),y2:Y(t).toFixed(1)}));
+    g.appendChild(S('text',{class:'axis',x:m.l-8,y:(Y(t)+3).toFixed(1),'text-anchor':'end',text:fmt(t,0)}));
+  });
+  ticks(xmin-padX,xmax+padX).forEach(t=>{
+    g.appendChild(S('text',{class:'axis',x:X(t).toFixed(1),y:py0+18,'text-anchor':'middle',text:fmt(t,0)}));
+  });
+  g.appendChild(S('line',{class:'baseline',x1:m.l,x2:px,y1:py0,y2:py0}));
+  g.appendChild(S('line',{class:'baseline',x1:m.l,x2:m.l,y1:m.t,y2:py0}));
+  g.appendChild(S('text',{class:'axis-title',x:(m.l+px)/2,y:H-8,'text-anchor':'middle',text:xlab}));
+  g.appendChild(S('text',{class:'axis-title',transform:`translate(14,${(m.t+py0)/2}) rotate(-90)`,'text-anchor':'middle',text:ylab}));
+  // dots
+  const labeled=label?label(rows):[];
+  rows.forEach(d=>{
+    if(y(d)==null)return;
+    const c=S('circle',{class:'dot',cx:X(x(d)).toFixed(1),cy:Y(y(d)).toFixed(1),r:5.5,fill:fill(d)});
+    c.addEventListener('mouseenter',ev=>{showTip(tip(d),ev);c.setAttribute('r',7.5);});
+    c.addEventListener('mousemove',moveTip);
+    c.addEventListener('mouseleave',()=>{hideTip();c.setAttribute('r',5.5);});
+    g.appendChild(c);
+  });
+  labeled.forEach(d=>{if(y(d)==null)return;
+    const cx=X(x(d)),cy=Y(y(d));
+    const nm=d.player_short_name.length>18?d.player_short_name.split(' ')[0]:d.player_short_name;
+    const flip=cx>px-140;   // near right edge -> place label to the left
+    g.appendChild(S('text',{class:'dlabel',
+      x:(flip?cx-9:cx+9).toFixed(1),y:(cy+4).toFixed(1),
+      'text-anchor':flip?'end':'start',text:nm}));});
+}
+
+// ---------- ATHLETIC ----------
+function renderAthletic(){
+  const rows=filtered().filter(d=>d.top_speed!=null&&d.m_per_min!=null);
+  const top=[...rows].sort((a,b)=>(b.top_speed+b.m_per_min/10)-(a.top_speed+a.m_per_min/10)).slice(0,6);
+  scatter('athletic',rows,{
+    x:d=>d.top_speed,y:d=>d.m_per_min,
+    xlab:'Peak sprint speed (km/h) →',ylab:'Work rate (m / min) →',
+    fill:()=>'var(--series-1)',
+    label:()=>top,
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short}</div>
+      <div class="row"><span>Peak speed</span><b>${fmt(d.top_speed)} km/h</b></div>
+      <div class="row"><span>Work rate</span><b>${fmt(d.m_per_min)} m/min</b></div>
+      <div class="row"><span>Distance</span><b>${fmt(d.distance/1000,1)} km</b></div>
+      <div class="row"><span>Sprints</span><b>${fmt(d.sprints)}</b></div>`
+  });
+  document.getElementById('scatterLegend').innerHTML=
+    `<span class="item"><span class="swatch" style="background:var(--series-1)"></span>Player (60+ min)</span>
+     <span class="item" style="color:var(--muted)">Labelled: top all-round athletes in view</span>`;
+  buildTable('athletic-table',rows,[
+    ['Player',d=>d.player_short_name],['Team',d=>d.team_short],['Pos',d=>d.position_group],
+    ['Speed',d=>fmt(d.top_speed)],['m/min',d=>fmt(d.m_per_min)],['Dist km',d=>fmt(d.distance/1000)],
+    ['Sprints',d=>fmt(d.sprints)]],3);
+}
+
+// ---------- PASSING ----------
+function passColor(over){ // diverging blue(+) <-> red(-)
+  const t=Math.max(-1,Math.min(1,over/8));
+  if(Math.abs(t)<0.08)return 'var(--mid)';
+  return t>0?`color-mix(in srgb, var(--pos) ${Math.round(35+t*65)}%, var(--mid))`
+            :`color-mix(in srgb, var(--neg) ${Math.round(35-t*65)}%, var(--mid))`;
+}
+function renderPassing(){
+  const rows=filtered().filter(d=>d.pass_vol!=null&&d.pass_pct!=null);
+  const top=[...rows].sort((a,b)=>b.pass_vol-a.pass_vol).slice(0,5)
+    .concat([...rows].sort((a,b)=>b.pass_over-a.pass_over).slice(0,3));
+  scatter('passing',rows,{
+    x:d=>d.pass_vol,y:d=>d.pass_pct,
+    xlab:'Passes attempted per 30 min in possession →',ylab:'Completion % →',
+    fill:d=>passColor(d.pass_over),
+    label:()=>[...new Set(top)],
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short}</div>
+      <div class="row"><span>Pass volume</span><b>${fmt(d.pass_vol)}</b></div>
+      <div class="row"><span>Completion</span><b>${fmt(d.pass_pct)}%</b></div>
+      <div class="row"><span>vs expected</span><b>${d.pass_over>0?'+':''}${fmt(d.pass_over)}%</b></div>
+      <div class="row"><span>Line breaks</span><b>${fmt(d.linebreaks)}</b></div>`
+  });
+  document.getElementById('passLegend').innerHTML=
+    `<span class="item">Completes vs expected:</span>
+     <span class="item"><span class="swatch" style="background:var(--neg)"></span>below</span>
+     <span class="item"><span class="swatch" style="background:var(--mid);border:1px solid var(--border)"></span>as expected</span>
+     <span class="item"><span class="swatch" style="background:var(--pos)"></span>above</span>`;
+  buildTable('passing-table',rows,[
+    ['Player',d=>d.player_short_name],['Team',d=>d.team_short],['Pos',d=>d.position_group],
+    ['Vol/30',d=>fmt(d.pass_vol)],['Comp%',d=>fmt(d.pass_pct)],['vs xP',d=>(d.pass_over>0?'+':'')+fmt(d.pass_over)],
+    ['LineBrk',d=>fmt(d.linebreaks)],['Danger',d=>fmt(d.dangerous_passes)]],4);
+}
+
+// ---------- TABLE builder ----------
+function buildTable(id,rows,cols,sortCol){
+  const box=document.getElementById(id);box.innerHTML='';
+  const t=el('table');const thead=el('tr');
+  cols.forEach((c,i)=>{const th=el('th',{text:c[0]});th.onclick=()=>{sortState[id]=(sortState[id]&&sortState[id].i===i)?{i,dir:-sortState[id].dir}:{i,dir:-1};draw();};thead.appendChild(th);});
+  t.appendChild(el('thead',{},thead));const tb=el('tbody');t.appendChild(tb);box.appendChild(t);
+  function draw(){tb.innerHTML='';let rs=[...rows];const ss=sortState[id];
+    if(ss){const f=cols[ss.i][1];rs.sort((a,b)=>{const va=f(a),vb=f(b),na=parseFloat(String(va).replace(/[^\d.-]/g,'')),nb=parseFloat(String(vb).replace(/[^\d.-]/g,''));
+      return (isNaN(na)||isNaN(nb))?String(va).localeCompare(String(vb))*ss.dir:(na-nb)*ss.dir;});}
+    rs.forEach(d=>{const tr=el('tr');cols.forEach(c=>tr.appendChild(el('td',{text:c[1](d)})));tb.appendChild(tr);});}
+  sortState[id]={i:sortCol,dir:-1};draw();
+}
+const sortState={};
+document.querySelectorAll('[data-table]').forEach(b=>{
+  b.onclick=()=>{const id=b.dataset.table+'-table';const sv=document.getElementById(b.dataset.table);
+    const on=b.getAttribute('aria-pressed')==='true';b.setAttribute('aria-pressed',!on);
+    document.getElementById(id).classList.toggle('show',!on);sv.style.display=on?'block':'none';
+    sv.previousElementSibling; };
+});
+
+// ---------- PLAYER PROFILE ----------
+const PF_METRICS=[
+  ['Physical',[['top_speed','Peak speed'],['distance','Distance'],['m_per_min','Work rate'],
+    ['sprints','Sprints'],['hi_count','High-intensity'],['high_accel','Explosive accel']]],
+  ['Passing',[['pass_vol','Pass volume'],['pass_pct','Completion %'],['pass_over','Beats xPass'],
+    ['linebreaks','Line breaks'],['dangerous_passes','Dangerous passes']]],
+  ['Off-ball runs',[['runs','Total runs'],['dangerous_runs','Dangerous runs'],['runs_received','Runs received']]],
+];
+function pct(arr,v){if(v==null)return null;const vals=arr.filter(x=>x!=null).sort((a,b)=>a-b);
+  if(!vals.length)return null;let c=0;for(const x of vals)if(x<=v)c++;return Math.round(100*c/vals.length);}
+function renderProfile(){
+  const sel=document.getElementById('playerSelect');
+  const pid=+sel.value;const d=DATA.find(p=>p.player_id===pid);if(!d)return;
+  const peers=DATA.filter(p=>p.position_group===d.position_group);
+  document.getElementById('peerCount').textContent=`vs ${peers.length} ${d.position_group}s`;
+  document.getElementById('pfHead').innerHTML=
+    `<span class="name">${d.player_name}</span>
+     <span class="meta">${d.position_group} · ${d.team_short} · ${d.matches} matches · ${fmt(d.minutes,0)} min/match</span>`;
+  const box=document.getElementById('profile');box.innerHTML='';
+  PF_METRICS.forEach(([grp,metrics])=>{
+    box.appendChild(el('div',{class:'pf-group',text:grp}));
+    metrics.forEach(([key,lab])=>{
+      const p=pct(peers.map(x=>x[key]),d[key]);
+      const row=el('div',{class:'pf-row'});
+      row.appendChild(el('div',{class:'pf-lab',text:lab}));
+      const track=el('div',{class:'pf-track'});
+      track.appendChild(el('div',{class:'pf-mid'}));
+      if(p!=null){
+        const above=p>=50;const half=Math.abs(p-50);
+        const fill=el('div',{class:'pf-fill'});
+        fill.style.background=above?'var(--pos)':'var(--neg)';
+        fill.style.width=half+'%';
+        fill.style.left=above?'50%':(50-half)+'%';
+        track.appendChild(fill);
+      }
+      row.appendChild(track);
+      row.appendChild(el('div',{class:'pf-val',text:p==null?'—':p,style:`color:${p==null?'var(--muted)':p>=50?'var(--pos)':'var(--neg)'}`}));
+      box.appendChild(row);
+    });
+  });
+}
+(function(){
+  const sel=document.getElementById('playerSelect');const dl=document.getElementById('playerList');
+  const sorted=[...DATA].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  sorted.forEach(d=>{sel.appendChild(el('option',{value:d.player_id,text:`${d.player_name} — ${d.team_short}`}));
+    dl.appendChild(el('option',{value:d.player_name}));});
+  // default: fastest player
+  const def=DATA.filter(d=>d.top_speed!=null).reduce((a,b)=>b.top_speed>a.top_speed?b:a);
+  sel.value=def.player_id;
+  sel.onchange=renderProfile;
+  document.getElementById('playerSearch').addEventListener('change',e=>{
+    const m=DATA.find(d=>d.player_name.toLowerCase()===e.target.value.toLowerCase());
+    if(m){sel.value=m.player_id;renderProfile();}});
+})();
+
+// ---------- TEAM BARS ----------
+const TEAM_METRICS=[['m_per_min','Work rate (m/min)',1],['top_speed','Avg peak speed (km/h)',1],
+  ['distance','Distance / match (km)',1000],['hi_count','High-intensity efforts',1]];
+let teamMetric=0;
+(function(){const box=document.getElementById('teamMetric');
+  TEAM_METRICS.forEach((m,i)=>{const c=el('button',{class:'chip','aria-pressed':i===0,text:m[1]});
+    c.onclick=()=>{teamMetric=i;[...box.children].forEach((x,j)=>x.setAttribute('aria-pressed',j===i));renderTeams();};
+    box.appendChild(c);});})();
+function renderTeams(){
+  const [key,lab,div]=TEAM_METRICS[teamMetric];
+  const teams={};
+  DATA.forEach(d=>{if(d[key]==null)return;(teams[d.team_short]??=[]).push(d[key]);});
+  const rows=Object.entries(teams).map(([t,v])=>[t,v.reduce((a,b)=>a+b,0)/v.length/div]).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...rows.map(r=>r[1]));
+  const box=document.getElementById('teamBars');box.innerHTML='';
+  rows.forEach(([t,v])=>{
+    const row=el('div',{class:'tbar-row'});
+    row.appendChild(el('div',{class:'tbar-lab',text:t}));
+    const track=el('div',{class:'tbar-track'});
+    const fill=el('div',{class:'tbar-fill'});fill.style.width=(v/max*100)+'%';
+    track.appendChild(fill);row.appendChild(track);
+    row.appendChild(el('div',{class:'tbar-val',text:fmt(v,div===1000?2:1)}));
+    box.appendChild(row);
+  });
+  document.getElementById('teamCaption').textContent=lab+' — squad average across players with 60+ minutes.';
+}
+
+// ---------- RUN MIX ----------
+function renderRunMix(){
+  const rows=filtered().filter(d=>d.runs!=null).sort((a,b)=>b.runs-a.runs).slice(0,14);
+  const keys=RUN_FAMILIES.map(f=>'run__'+f);
+  const box=document.getElementById('runMix');box.innerHTML='';
+  rows.forEach(d=>{
+    const tot=keys.reduce((s,k)=>s+(d[k]||0),0)||1;
+    const row=el('div',{class:'runmix-row'});
+    row.appendChild(el('div',{class:'runmix-lab',text:d.player_short_name}));
+    const bar=el('div',{class:'runbar'});
+    RUN_FAMILIES.forEach((f,i)=>{
+      const val=d['run__'+f]||0;if(val<=0)return;
+      const seg=el('div',{class:'runseg'});
+      seg.style.width=(val/tot*100)+'%';seg.style.background=RUN_COLORS[i];
+      seg.addEventListener('mouseenter',ev=>showTip(
+        `<b>${d.player_short_name}</b><div class="pos">${f}</div>
+         <div class="row"><span>Runs/30</span><b>${fmt(val)}</b></div>
+         <div class="row"><span>Share</span><b>${fmt(val/tot*100,0)}%</b></div>`,ev));
+      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);
+      bar.appendChild(seg);
+    });
+    row.appendChild(bar);box.appendChild(row);
+  });
+  document.getElementById('runLegend').innerHTML=RUN_FAMILIES.map((f,i)=>
+    `<span class="item"><span class="swatch" style="background:${RUN_COLORS[i]}"></span>${f}</span>`).join('');
+}
+
+// ---------- render all ----------
+function renderAll(){renderAthletic();renderPassing();renderRunMix();}
+renderAll();renderProfile();renderTeams();
+addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
+</script>
