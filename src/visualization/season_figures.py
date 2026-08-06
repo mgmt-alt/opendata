@@ -28,7 +28,7 @@ from matplotlib.lines import Line2D
 
 from src.visualization.build_dashboard_data import load_merged, RUN_FAMILIES  # noqa: F401
 from src.visualization.player_score import (
-    compute_scores, SILO_NAMES, ALL_SILO_NAMES, SAMPLE_SILO_NAMES,
+    compute_scores, team_scores, SILO_NAMES, ALL_SILO_NAMES, SAMPLE_SILO_NAMES,
     POSITION_WEIGHTS, BALANCED_WEIGHTS,
 )
 
@@ -246,6 +246,43 @@ def fig_leaderboard(df, n=20, include_sample=False, out=None):
     _save(fig, out or ("leaderboard_full.png" if include_sample else "leaderboard.png"))
 
 
+def fig_team_profile(df):
+    """Team equivalent of the leaderboard: each club's squad silo profile (minutes-weighted
+    mean of its players' silo scores), stacked, sorted by Overall."""
+    t = team_scores(df).iloc[::-1]  # best at top
+    silo_l = [s.lower() for s in ALL_SILO_NAMES]
+    fig, ax = plt.subplots(figsize=(11.5, 7.5))
+    y = np.arange(len(t))
+    left = np.zeros(len(t))
+    for s, sl in zip(ALL_SILO_NAMES, silo_l):
+        vals = (t[sl].fillna(0) / len(ALL_SILO_NAMES)).to_numpy()  # contribution to the mean
+        ax.barh(y, vals, left=left, height=0.7, color=SILO_COLORS[s],
+                edgecolor=SURFACE, linewidth=1.0, zorder=3, label=s)
+        left += vals
+    for yi, r in zip(y, t.itertuples()):
+        ax.text(left[yi] + 0.4, yi, f"{r.overall:.0f}", va="center", ha="left",
+                fontsize=10, fontweight="bold", color=INK)
+    ax.set_yticks(y)
+    ax.set_yticklabels([f"{r.team}  ({int(r.players)})" for r in t.itertuples()],
+                       fontsize=10, color=INK2)
+    ax.set_xlim(0, max(left) + 5)
+    ax.set_xlabel("Squad silo profile (0–100 mean) · number = minutes-weighted Overall", fontsize=10)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.tick_params(left=False)
+    ax.grid(True, axis="x", color=GRID, linewidth=0.8, zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=8, frameon=False,
+              fontsize=9, handlelength=1.0, columnspacing=1.1)
+    ax.set_title("A-League 2024/25 — team squad profiles", fontsize=16, fontweight="bold",
+                 color=INK, loc="left", pad=26)
+    ax.text(0, 1.02, "Minutes-weighted average of each squad's player silos · "
+            "Shooting/Defending/Dribbling from the 10 tracked matches",
+            transform=ax.transAxes, fontsize=10, color=INK2)
+    fig.text(0.99, 0.005, CREDIT, ha="right", fontsize=8, color=MUTED)
+    fig.tight_layout(rect=[0, 0.05, 1, 0.95])
+    _save(fig, "team_profile.png")
+
+
 def fig_player_card(df, player_name=None):
     """A FIFA-style card. If the player is in the 10-match sample, all eight faces
     are shown; otherwise the five season faces plus the three sample faces greyed."""
@@ -388,6 +425,7 @@ def main():
     print(f"Loaded {len(df)} players. Rendering figures ->")
     fig_leaderboard(df)                       # season, 5 silos
     fig_leaderboard(df, include_sample=True)  # full profile, 8 silos
+    fig_team_profile(df)                       # team equivalent
     fig_player_card(df)
     fig_radar(df)
     fig_shooting()

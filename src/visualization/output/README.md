@@ -55,6 +55,29 @@ to beat 100% of a larger population — and the worst sits just above 0.
 independent of whichever archetype preset the leaderboard is set to (so it never shows a
 single silo's number as the overall).
 
+**Teams have the same silos.** Every player metric has a team equivalent — each club's
+**minutes-weighted average** of its players' silo scores, on the same 0–100 scale, with a
+minutes-weighted Overall. Browse them in the *Teams* section (sort by any silo) and compare
+two clubs in the radar's *Teams* mode. Exported to `team_leaderboard.csv`; a static
+`team_profile.png` is in `assets/viz/`.
+
+![Team squad profiles](../../../assets/viz/team_profile.png)
+
+### Data scope & integrity
+
+- **Not everything is 10 games.** Pace/Physical/Passing/Creation/Movement come from the
+  **full-season** aggregate CSVs (players feature in up to 29 matches). Only
+  Shooting/Defending/Dribbling come from the **10 dynamic-event matches**.
+- **Derivations are validated against the raw files.** Recomputing the sample metrics
+  straight from the event CSVs matches the pipeline exactly (shots 226, goals 26,
+  take-ons 131, regains 1682), and the dashboard's JavaScript reproduces the Python
+  scores identically. What are *choices*, not facts, are the metric weights (e.g. a goal =
+  3 shots) — tunable in one place each.
+- **Known limits of the source data:** ~97% tracking-ID accuracy (per the repo README),
+  no xG or shots-on-target, and the 10-match silos are a small sample (1–4 appearances per
+  player), so treat those three as directional. Teams appearing in more of the 10 matches
+  (e.g. Auckland) accumulate more sample events, which can lift their sample silos.
+
 **Why the sample silos are volume totals, ranked league-wide.** Two failure modes to avoid:
 1. *Per-appearance rates* explode on tiny samples — a player with 4 shots in one tracked
    game looks like a 4-shots-per-game monster. Using **totals over the sample** means a

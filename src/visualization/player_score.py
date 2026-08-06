@@ -122,6 +122,7 @@ def compute_scores(
     group_col: str = "position_group",
     min_matches: int = 3,
     include_sample: bool = False,
+    eligible_only: bool = True,
 ) -> pd.DataFrame:
     """Ranked leaderboard with per-metric percentiles, silo scores and an Overall.
 
@@ -175,7 +176,10 @@ def compute_scores(
     out["score_overall"] = np.round(_weighted_mean(silo_vals, wmat), 1)
 
     # eligibility: min matches, plus all silos present (in sample scope this restricts
-    # to players who appear in the tracked matches)
+    # to players who appear in the tracked matches). eligible_only=False keeps every
+    # player with their available silos — used for team aggregation.
+    if not eligible_only:
+        return out
     eligible = (out["matches"] >= min_matches) & ~np.isnan(silo_vals).any(axis=1)
     out = out[eligible].copy()
 
@@ -185,6 +189,25 @@ def compute_scores(
         out.groupby(group_col)["score_overall"].rank(ascending=False, method="min").astype("Int64")
     )
     return out
+
+
+def team_scores(df: pd.DataFrame) -> pd.DataFrame:
+    """Team equivalent of the player silos: each club's minutes-weighted average across
+    its players (season minutes = per-match minutes x matches as the weight), plus a
+    minutes-weighted Overall. Sample silos only reflect a squad's sampled players."""
+    s = compute_scores(df, include_sample=True, eligible_only=False)
+    s = s.assign(_w=(s["minutes"] * s["matches"]).clip(lower=1))
+    rows = []
+    for team, g in s.groupby("team_short"):
+        row = {"team": team, "players": int(len(g))}
+        for col in [*(f"silo__{x}" for x in ALL_SILO_NAMES), "score_overall"]:
+            v, w = g[col], g["_w"]
+            m = v.notna()
+            row[col] = round((v[m] * w[m]).sum() / w[m].sum(), 1) if m.any() else np.nan
+        rows.append(row)
+    out = pd.DataFrame(rows).sort_values("score_overall", ascending=False).reset_index(drop=True)
+    return out.rename(columns={"score_overall": "overall",
+                               **{f"silo__{x}": x.lower() for x in ALL_SILO_NAMES}})
 
 
 def leaderboard(df: pd.DataFrame, n: int = 25, include_sample: bool = False, **kwargs) -> pd.DataFrame:
@@ -215,8 +238,12 @@ def main() -> None:
                  "score_overall", *[f"silo__{s}" for s in ALL_SILO_NAMES]]
     (OUT_DIR / "sample_leaderboard.csv").write_text(full[full_cols].round(1).to_csv(index=False))
 
+    teams = team_scores(df)
+    (OUT_DIR / "team_leaderboard.csv").write_text(teams.to_csv(index=False))
+
     print(f"Season leaderboard: {len(ranked)} players (5 silos).")
-    print(f"Full-profile leaderboard: {len(full)} players (8 silos, 10-match sample).\n")
+    print(f"Full-profile leaderboard: {len(full)} players (8 silos, 10-match sample).")
+    print(f"Team leaderboard: {len(teams)} teams.\n")
     print("Top 12 — full 8-silo profile (position-aware):\n")
     print(leaderboard(df, 12, include_sample=True).to_string(index=False))
 
