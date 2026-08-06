@@ -132,6 +132,37 @@
   .pf-na{font-size:11.5px;color:var(--muted);align-self:center;padding-left:2px}
   .pf-na b{color:var(--ink-2);font-weight:600}
   .pf-face.sample{border-style:dashed}
+  .pf-face[role=button]{cursor:pointer;transition:border-color .15s,transform .1s}
+  .pf-face[role=button]:hover{border-color:var(--series-1)}
+  .pf-face.active{border-color:var(--series-1);box-shadow:0 0 0 2px var(--series-1) inset}
+  /* silo drill-down */
+  .pf-group{display:flex;justify-content:space-between;align-items:center}
+  .pf-siloscore{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .tag-s{font-size:9px;background:var(--grid);color:var(--ink-2);border-radius:4px;padding:1px 5px;
+    letter-spacing:.04em;font-weight:700;vertical-align:middle}
+  .dd-hint{font-size:12.5px;color:var(--ink-2);margin:4px 0 8px;line-height:1.5}
+  .dd-hint a{color:var(--series-1);cursor:pointer}
+  .dd-row{display:grid;grid-template-columns:200px 1fr 66px 40px;align-items:center;gap:10px;padding:3px 0}
+  .dd-lab{font-size:12.5px;color:var(--ink-2);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+  .dd-lab .wt{font-size:9.5px;font-weight:800;color:var(--series-1);background:var(--grid);
+    border-radius:4px;padding:1px 4px;font-variant-numeric:tabular-nums}
+  .dd-val{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+  .bw{position:relative;height:22px}
+  .bw-axis{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--grid)}
+  .bw-dot{position:absolute;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
+    background:var(--axis);opacity:.32}
+  .bw-me{position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+    border:2px solid var(--surface);box-shadow:0 0 0 1px var(--axis);cursor:pointer}
+  .bw-empty{font-size:11px;color:var(--muted);line-height:22px}
+  /* scatter explorer + heat-map controls */
+  .xp-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-bottom:10px}
+  .xp-controls label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;font-weight:600;flex:1 1 150px;min-width:0;max-width:100%}
+  .xp-controls select{min-width:0;width:100%;max-width:100%}
+  .xp-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+  .xp-legend .item{display:inline-flex;align-items:center;gap:6px}
+  .hm-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  .pitch-line{stroke:var(--axis);stroke-width:1;fill:none;opacity:.5}
   .chip.toggle{margin-left:6px}
   .chip.toggle[aria-pressed="true"]{background:var(--c6);border-color:var(--c6);color:#fff}
   /* radar */
@@ -210,8 +241,11 @@
   @media (max-width:560px){
     .pf-row{grid-template-columns:110px 1fr 40px}
     .pf-lab{font-size:12px}
+    .dd-row{grid-template-columns:120px 1fr 52px 32px;gap:6px}
+    .dd-lab{font-size:11px}
     .tbar-row{grid-template-columns:104px 1fr 46px}
     .runmix-row{grid-template-columns:96px 1fr}
+    .xp-controls select{min-width:130px}
   }
 </style>
 
@@ -318,6 +352,28 @@
     </div>
   </section>
 
+  <!-- SCATTER EXPLORER -->
+  <section id="explore-section">
+    <div class="sec-head">
+      <h2>Scatter explorer — find your own nuggets</h2>
+      <p>The open sandbox: plot <strong>any metric against any other</strong>, then size and colour the dots by a third
+        and fourth. Every metric that feeds the silos — plus dozens of extra season and 10-match measures — is on the
+        menu. Filtered by position above; hover a dot for detail, click it to open that player's card.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-explore"></div>
+      <div class="xp-controls">
+        <label>X axis<select id="xpX"></select></label>
+        <label>Y axis<select id="xpY"></select></label>
+        <label>Size<select id="xpSize"></select></label>
+        <label>Colour<select id="xpColor"></select></label>
+        <button class="toolbtn" id="xpSwap" title="Swap X and Y">⇄ swap</button>
+      </div>
+      <div class="chart-wrap"><svg id="explore"></svg></div>
+      <div class="caption" id="xpCap"></div>
+    </div>
+  </section>
+
   <!-- PLAYER PROFILE -->
   <section id="pf-section">
     <div class="sec-head">
@@ -339,6 +395,27 @@
       <div class="pf-head" id="pfHead"></div>
       <div class="pf-faces" id="pfFaces"></div>
       <div class="profile-grid" id="profile"></div>
+    </div>
+  </section>
+
+  <!-- ACTION HEAT-MAPS -->
+  <section id="heat-section">
+    <div class="sec-head">
+      <h2>Action heat-maps <span class="badge">10-match sample</span></h2>
+      <p>Where a player (or squad) operates across the 10 tracked matches — <strong>on-ball touches</strong>,
+        <strong>defensive engagements</strong> and <strong>off-ball runs</strong>. Pitch is attacking
+        <strong>left → right</strong>. Sample only, so it's a texture of tendencies, not a full-season map.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-heat"></div>
+      <div class="hm-controls">
+        <input id="hmSearch" type="search" placeholder="Search…" list="hmList" autocomplete="off">
+        <datalist id="hmList"></datalist>
+        <select id="hmSelect"></select>
+        <div class="vseg" id="hmLayers"></div>
+      </div>
+      <div class="chart-wrap"><svg id="heat"></svg></div>
+      <div class="caption" id="hmCap"></div>
     </div>
   </section>
 
@@ -393,9 +470,13 @@ const DATA = PAYLOAD.players;
 const META = PAYLOAD.meta;
 // Shooting from the 10-match dynamic-events sample (keyed by player_id). Not
 // season-wide, no xG — kept separate from the season SkillCorner Score.
-const SAMPLE_SHOOTING = __SAMPLE_SHOOTING__;
+const SAMPLE_PAYLOAD = __SAMPLE_SHOOTING__;
+const SAMPLE_SHOOTING = SAMPLE_PAYLOAD.players;
+const SAMPLE_META = SAMPLE_PAYLOAD.meta;              // {grid_cols,grid_rows,layers}
 DATA.forEach(d=>{d.shot=SAMPLE_SHOOTING[d.player_id]||null;});
 const RUN_FAMILIES = META.run_families;
+const METRICS = META.metrics;                          // metric registry (drill-down + explorer)
+const METRIC_BY_KEY = Object.fromEntries(METRICS.map(m=>[m.key,m]));
 const RUN_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
 const SVGNS='http://www.w3.org/2000/svg';
 const fmt=(v,d=1)=>v==null?'—':(+v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -452,7 +533,7 @@ function moveTip(ev){const p=12,w=tt.offsetWidth,h=tt.offsetHeight;
 function hideTip(){tt.style.opacity=0;}
 
 // ---------- generic scatter ----------
-function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip}){
+function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip,size,onclick}){
   const svg=document.getElementById(svgId);svg.textContent='';
   const W=Math.min(svg.parentElement.clientWidth||900,1040),H=Math.round(W*0.56);
   const m={l:52,r:18,t:12,b:46};
@@ -480,11 +561,13 @@ function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip}){
   // dots
   const labeled=label?label(rows):[];
   rows.forEach(d=>{
-    if(y(d)==null)return;
-    const c=S('circle',{class:'dot',cx:X(x(d)).toFixed(1),cy:Y(y(d)).toFixed(1),r:5.5,fill:fill(d)});
-    c.addEventListener('mouseenter',ev=>{showTip(tip(d),ev);c.setAttribute('r',7.5);});
+    if(y(d)==null||x(d)==null)return;
+    const r=size?size(d):5.5;
+    const c=S('circle',{class:'dot',cx:X(x(d)).toFixed(1),cy:Y(y(d)).toFixed(1),r:r.toFixed(1),fill:fill(d)});
+    c.addEventListener('mouseenter',ev=>{showTip(tip(d),ev);c.setAttribute('r',(r+2).toFixed(1));});
     c.addEventListener('mousemove',moveTip);
-    c.addEventListener('mouseleave',()=>{hideTip();c.setAttribute('r',5.5);});
+    c.addEventListener('mouseleave',()=>{hideTip();c.setAttribute('r',r.toFixed(1));});
+    if(onclick){c.style.cursor='pointer';c.addEventListener('click',()=>onclick(d));}
     g.appendChild(c);
   });
   labeled.forEach(d=>{if(y(d)==null)return;
@@ -574,16 +657,7 @@ document.querySelectorAll('[data-table]').forEach(b=>{
 });
 
 // ---------- PLAYER PROFILE ----------
-// profile detail grouped by the five silos (labels for the key metrics in each)
-const PF_METRICS=[
-  ['Pace',[['top_speed','Peak speed'],['sprints','Sprints'],['expl_sprint','Accel→sprint'],['high_accel','Explosive accel']]],
-  ['Physical',[['distance','Distance'],['m_per_min','Work rate'],['hi_count','High-intensity'],['hsr_dist','High-speed dist'],['high_decel','Decelerations']]],
-  ['Passing',[['pass_over','Beats xPass'],['pass_pct','Completion %'],['pass_vol','Pass volume'],['pass_dist','Pass range']]],
-  ['Creation',[['dangerous_passes','Dangerous passes'],['linebreaks','Line breaks'],['pass_shot','Passes → shots'],['pass_torun','Passes → runs'],['pass_goal','Passes → goals']]],
-  ['Movement',[['dangerous_runs','Dangerous runs'],['runs_received','Runs received'],['run_shot','Runs → shots'],['runs_targeted','Runs targeted'],['runs_box','Runs into box'],['runs','Total runs']]],
-];
-function pct(arr,v){if(v==null)return null;const vals=arr.filter(x=>x!=null).sort((a,b)=>a-b);
-  if(!vals.length)return null;let c=0;for(const x of vals)if(x<=v)c++;return Math.round(100*c/vals.length);}
+let pfSilo=null;   // null = overview of all silos; a silo name = deep-dive drill-down
 function renderProfile(){
   const team=SECVIEW.profile==='teams';
   const sel=document.getElementById('playerSelect');
@@ -606,37 +680,86 @@ function renderProfile(){
     const v=d['silo__'+s];const avail=v!=null;
     const bar=el('div',{class:'fbar'});const fill=el('i');
     fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
-    const face=el('div',{class:'pf-face'+(sample?' sample':'')},[
+    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfSilo===s?' active':''),role:'button',tabindex:'0',
+      title:'Click to deconstruct this silo'},[
       el('div',{class:'fv',text:avail?Math.round(v):'—',style:`color:${avail?SILO_COLORS[s]:'var(--muted)'}`}),
       el('div',{class:'fl',html:s+(sample?' <span style="opacity:.55">*</span>':'')}),bar]);
-    if(sample&&d.shot)face.title=`${d.shot.shots} shots · ${d.shot.goals} goals · ${d.shot.regains} regains · ${d.shot.carries} carries in ${d.shot.apps} tracked matches`;
+    face.onclick=()=>{pfSilo=(pfSilo===s?null:s);renderProfile();};
+    face.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();face.onclick();}};
     faces.appendChild(face);
   });
   faces.appendChild(el('div',{class:'pf-na',html:
-    (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no xG in data'}));
-  // percentile detail
+    (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no per-shot xG'}));
+  renderProfileDetail(d,peers,team);
+}
+// peers for sample metrics = the sampled pool (league-wide), not just position peers
+function samplePeers(team){return (team?teamEntities():DATA).filter(x=>x.shot);}
+// Silo drill-down: overview (all silos, compact bars for the scoring metrics) OR, when a
+// silo face is clicked, a deep dive into that silo — every metric (scoring + explore) with
+// the player's raw value, weight, good-oriented percentile and a beeswarm vs peers.
+function renderProfileDetail(d,peers,team){
   const box=document.getElementById('profile');box.innerHTML='';
-  PF_METRICS.forEach(([grp,metrics])=>{
-    box.appendChild(el('div',{class:'pf-group',html:`<span style="color:${SILO_COLORS[grp]}">■</span> ${grp}`}));
-    metrics.forEach(([key,lab])=>{
-      const p=pct(peers.map(x=>x[key]),d[key]);
-      const row=el('div',{class:'pf-row'});
-      row.appendChild(el('div',{class:'pf-lab',text:lab}));
-      const track=el('div',{class:'pf-track'});
-      track.appendChild(el('div',{class:'pf-mid'}));
-      if(p!=null){
-        const above=p>=50;const half=Math.abs(p-50);
-        const fill=el('div',{class:'pf-fill'});
-        fill.style.background=above?'var(--pos)':'var(--neg)';
-        fill.style.width=half+'%';
-        fill.style.left=above?'50%':(50-half)+'%';
-        track.appendChild(fill);
+  const sp=samplePeers(team);
+  const hint=el('div',{class:'dd-hint',html:pfSilo
+    ?`Deconstructing <b style="color:${SILO_COLORS[pfSilo]}">${pfSilo}</b> — every metric, the player vs peers. <a href="#" id="ddAll">← all silos</a>`
+    :'Percentile vs peers for each scoring metric. <b>Click a silo face above</b> to deconstruct it — its full metric set + distributions.'});
+  box.appendChild(hint);
+  if(pfSilo){const a=hint.querySelector('#ddAll');if(a)a.onclick=e=>{e.preventDefault();pfSilo=null;renderProfile();};}
+  const silosToShow=pfSilo?[pfSilo]:ALL_NAMES;
+  silosToShow.forEach(silo=>{
+    const sample=SAMPLE_NAMES.includes(silo);
+    const scoreSet=ALL_SILOS[silo];             // {metricKey: weight} that BUILD the score
+    let mets=METRICS.filter(m=>m.silo===silo);
+    // in overview mode show only the scoring metrics; in deep-dive show all, scoring first
+    if(!pfSilo)mets=mets.filter(m=>m.scoring);
+    mets=mets.slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
+    const sv=d['silo__'+silo];
+    box.appendChild(el('div',{class:'pf-group'},[
+      el('span',{html:`<span style="color:${SILO_COLORS[silo]}">■</span> ${silo}${sample?' <span class="tag-s">10-match</span>':''}`}),
+      el('span',{class:'pf-siloscore',text:sv==null?'—':Math.round(sv),style:`color:${sv==null?'var(--muted)':SILO_COLORS[silo]}`}),
+    ]));
+    mets.forEach(m=>{
+      const usePeers=m.src==='sample'?sp:peers;
+      const val=metricVal(d,m.key);const p=metricPct(m.key,d,usePeers);
+      const scoreW=scoreSet&&scoreSet[m.key];
+      const row=el('div',{class:'dd-row'});
+      row.appendChild(el('div',{class:'dd-lab'},[
+        el('span',{text:m.label}),
+        scoreW?el('span',{class:'wt',title:`weight ${scoreW} in the ${silo} score`,text:'×'+scoreW}):null,
+      ]));
+      if(pfSilo){
+        row.appendChild(beeswarm(m,d,usePeers,val));
+      }else{
+        const track=el('div',{class:'pf-track'});track.appendChild(el('div',{class:'pf-mid'}));
+        if(p!=null){const above=p>=50,half=Math.abs(p-50);const fill=el('div',{class:'pf-fill'});
+          fill.style.background=above?'var(--pos)':'var(--neg)';fill.style.width=half+'%';fill.style.left=above?'50%':(50-half)+'%';
+          track.appendChild(fill);}
+        row.appendChild(track);
       }
-      row.appendChild(track);
-      row.appendChild(el('div',{class:'pf-val',text:p==null?'—':p,style:`color:${p==null?'var(--muted)':p>=50?'var(--pos)':'var(--neg)'}`}));
+      row.appendChild(el('div',{class:'dd-val',text:fmtMetric(m.key,val)}));
+      row.appendChild(el('div',{class:'pf-val',text:p==null?'—':Math.round(p),
+        style:`color:${p==null?'var(--muted)':p>=50?'var(--pos)':'var(--neg)'}`}));
       box.appendChild(row);
     });
   });
+}
+// a horizontal distribution strip: faint dots for every peer, the player highlighted.
+function beeswarm(m,d,peers,val){
+  const wrap=el('div',{class:'bw'});
+  const vals=peers.map(p=>metricVal(p,m.key)).filter(x=>x!=null);
+  if(!vals.length||val==null){wrap.appendChild(el('div',{class:'bw-empty',text:'no peers'}));return wrap;}
+  const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  wrap.appendChild(el('div',{class:'bw-axis'}));
+  vals.forEach(v=>{const dot=el('div',{class:'bw-dot'});dot.style.left=((v-min)/span*100)+'%';wrap.appendChild(dot);});
+  const me=el('div',{class:'bw-me'});me.style.left=((val-min)/span*100)+'%';me.style.background=SILO_COLORS[m.silo];
+  me.title=`${d.player_short_name}: ${fmtMetric(m.key,val)} (peers ${fmtMetric(m.key,min)}–${fmtMetric(m.key,max)})`;
+  me.addEventListener('mouseenter',ev=>showTip(
+    `<b>${d.player_short_name}</b><div class="pos">${m.label}</div>
+     <div class="row"><span>Value</span><b>${fmtMetric(m.key,val)}</b></div>
+     <div class="row"><span>Peer range</span><b>${fmtMetric(m.key,min)} – ${fmtMetric(m.key,max)}</b></div>`,ev));
+  me.addEventListener('mousemove',moveTip);me.addEventListener('mouseleave',hideTip);
+  wrap.appendChild(me);
+  return wrap;
 }
 function buildProfileOptions(){
   const sel=document.getElementById('playerSelect');const dl=document.getElementById('playerList');
@@ -666,7 +789,7 @@ function initProfile(){
 // metrics + silo scores, summed shooting counts), so every graph can render teams by just
 // swapping its data source from filtered() to teamEntities() via pool().
 // Per-graph view state — each graph is independently Players or Teams.
-const SECVIEW={lb:'players',ath:'players',pass:'players',shoot:'players',run:'players',profile:'players',radar:'players'};
+const SECVIEW={lb:'players',ath:'players',pass:'players',shoot:'players',run:'players',profile:'players',radar:'players',explore:'players',heat:'players'};
 let TEAMS=null;
 const TEAM_RATE=['top_speed','m_per_min','distance','sprints','hi_count','high_accel','high_decel','hsr_dist','expl_sprint',
   'pass_vol','pass_pct','pass_over','xpass','linebreaks','dangerous_passes','pass_dist','pass_torun','pass_shot','pass_goal',
@@ -685,8 +808,15 @@ function teamEntities(){
     const sp=ps.filter(p=>p.shot);
     if(sp.length){const sum=f=>sp.reduce((a,p)=>a+(p.shot[f]||0),0);
       const apps=Math.max(...sp.map(p=>p.shot.apps||0))||1;
-      e.shot={shots:sum('shots'),goals:sum('goals'),regains:sum('regains'),carries:sum('carries'),
-        takeons:sum('takeons'),apps:apps,shots_per_app:sum('shots')/apps};}
+      const sh={apps:apps,shots_per_app:sum('shots')/apps};
+      SAMPLE_SUM.forEach(k=>sh[k]=sum(k));
+      for(const k in SAMPLE_DERIVED)sh[k]=SAMPLE_DERIVED[k](sh);
+      // squad action heat-map = element-wise sum of players' grids
+      const gsp=sp.filter(p=>p.shot.grid);
+      if(gsp.length){const g={};SAMPLE_META.layers.forEach(L=>{const n=gsp[0].shot.grid[L].length;
+        const arr=new Array(n).fill(0);gsp.forEach(p=>{const s=p.shot.grid[L];if(s)for(let i=0;i<n;i++)arr[i]+=s[i]||0;});
+        g[L]=arr;});sh.grid=g;}
+      e.shot=sh;}
     return e;
   });
   return TEAMS;
@@ -714,6 +844,8 @@ function initViewToggles(){
   mountViewToggle('view-run','run',renderRunMix);
   mountViewToggle('view-profile','profile',()=>{buildProfileOptions();renderProfile();});
   mountViewToggle('view-radar','radar',()=>{fillRadarPickers();renderRadar();});
+  mountViewToggle('view-explore','explore',()=>{fillExploreOptions();renderExplore();});
+  mountViewToggle('view-heat','heat',()=>{buildHeatOptions();renderHeat();});
 }
 
 // ---------- RUN MIX ----------
@@ -799,6 +931,32 @@ function pctIn(vals,v){if(v==null||!vals.length)return null;
     for(const m in ALL_SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}
     d['silo__'+s]=den>0?num/den:null;});});
 })();
+// ----- generic metric access (registry-driven) for drill-down + scatter explorer -----
+// Season metrics live on the player record; sample metrics live under d.shot.
+function metricVal(d,key){const m=METRIC_BY_KEY[key];if(!m)return null;
+  if(m.src==='sample')return d.shot?(d.shot[key]==null?null:d.shot[key]):null;
+  const v=d[key];return v==null?null:v;}
+const SAMPLE_KEYS=METRICS.filter(m=>m.src==='sample').map(m=>m.key);
+const SAMPLE_DERIVED={               // team-level rates recomputed from summed counts
+  conversion:t=>t.shots?t.goals/t.shots:null,
+  box_shot_pct:t=>t.shots?t.shots_box/t.shots*100:null,
+  def_success:t=>t.pressures?t.regains/t.pressures*100:null,
+  progcarry_pct:t=>t.carries?t.progcarries/t.carries*100:null,
+  elim_per_carry:t=>t.carries?t.opp_overtaken/t.carries:null,
+};
+const SAMPLE_SUM=SAMPLE_KEYS.filter(k=>!(k in SAMPLE_DERIVED));
+// number formatting per registry fmt
+function fmtMetric(key,v){if(v==null)return '—';const m=METRIC_BY_KEY[key];
+  if(!m)return fmt(v,1);
+  if(m.fmt==='int')return Math.round(v).toLocaleString();
+  if(m.fmt==='pct')return fmt(v,1)+'%';
+  if(m.fmt==='kmh')return fmt(v,1);
+  return fmt(v,1);}
+// good-oriented percentile of d among peers for a metric (respects better=-1)
+function metricPct(key,d,peers){const m=METRIC_BY_KEY[key];const v=metricVal(d,key);if(v==null)return null;
+  const vals=peers.map(p=>metricVal(p,key)).filter(x=>x!=null).sort((a,b)=>a-b);if(!vals.length)return null;
+  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);let p=((lo+hi)/2+1)/(vals.length+1)*100;
+  return m&&m.better===-1?100-p:p;}
 let includeSample=true;                     // default to the full 8 silos (matches the radar)
 let scoreMode='role';                       // 'role' (position-aware) or 'custom'
 const customW={};ALL_NAMES.forEach(s=>customW[s]=1);
@@ -1011,8 +1169,128 @@ function renderRadar(){
   host.innerHTML=leg;
 }
 
+// ---------- SCATTER EXPLORER ----------
+const XP_DEFAULT={x:'top_speed',y:'m_per_min',size:'none',color:'position'};
+const SILO_ORDER=ALL_NAMES;
+function fillExploreOptions(){
+  const groups={};METRICS.forEach(m=>{(groups[m.silo]??=[]).push(m);});
+  const opt=(m)=>el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')});
+  const fillSel=(id,extra)=>{const sel=document.getElementById(id);const cur=sel.value;sel.innerHTML='';
+    (extra||[]).forEach(([v,l])=>sel.appendChild(el('option',{value:v,text:l})));
+    SILO_ORDER.forEach(s=>{if(!groups[s])return;const og=el('optgroup',{label:s});
+      groups[s].forEach(m=>og.appendChild(opt(m)));sel.appendChild(og);});
+    if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;};
+  fillSel('xpX');fillSel('xpY');
+  fillSel('xpSize',[['none','— none —']]);
+  fillSel('xpColor',[['position','By position'],['none','Single colour']]);
+  if(!document.getElementById('xpX').value)document.getElementById('xpX').value=XP_DEFAULT.x;
+}
+const POS_COLOR={'Central Defender':'var(--c2)','Full Back':'var(--c1)','Midfield':'var(--c3)',
+  'Wide Attacker':'var(--c5)','Center Forward':'var(--c6)','Team':'var(--c7)'};
+function initExplore(){
+  fillExploreOptions();
+  document.getElementById('xpX').value=XP_DEFAULT.x;document.getElementById('xpY').value=XP_DEFAULT.y;
+  document.getElementById('xpSize').value=XP_DEFAULT.size;document.getElementById('xpColor').value=XP_DEFAULT.color;
+  ['xpX','xpY','xpSize','xpColor'].forEach(id=>document.getElementById(id).onchange=renderExplore);
+  document.getElementById('xpSwap').onclick=()=>{const a=document.getElementById('xpX'),b=document.getElementById('xpY');
+    const t=a.value;a.value=b.value;b.value=t;renderExplore();};
+}
+function renderExplore(){
+  const xk=document.getElementById('xpX').value,yk=document.getElementById('xpY').value;
+  const sk=document.getElementById('xpSize').value,ck=document.getElementById('xpColor').value;
+  const mx=METRIC_BY_KEY[xk],my=METRIC_BY_KEY[yk],ms=METRIC_BY_KEY[sk];
+  const rows=poolFor('explore').filter(d=>metricVal(d,xk)!=null&&metricVal(d,yk)!=null);
+  let sMin=0,sMax=1;
+  if(ms){const sv=rows.map(d=>metricVal(d,sk)).filter(v=>v!=null);if(sv.length){sMin=Math.min(...sv);sMax=Math.max(...sv);}}
+  const sizeFn=ms?(d=>{const v=metricVal(d,sk);if(v==null)return 4;const t=(v-sMin)/((sMax-sMin)||1);return 4+Math.sqrt(t)*11;}):null;
+  const colorFn=ck==='position'?(d=>POS_COLOR[d.position_group]||'var(--series-1)'):(()=>'var(--series-1)');
+  scatter('explore',rows,{
+    x:d=>metricVal(d,xk),y:d=>metricVal(d,yk),
+    xlab:(mx?mx.label:xk)+' →',ylab:(my?my.label:yk)+' →',
+    fill:colorFn,size:sizeFn,
+    label:rs=>{const key=my&&my.better===-1?-1:1;return [...rs].sort((a,b)=>key*(metricVal(b,yk)-metricVal(a,yk))).slice(0,6);},
+    onclick:d=>{if(d.isTeam)return;const s=document.getElementById('playerSelect');
+      if([...s.options].some(o=>String(o.value)===String(d.player_id))){SECVIEW.profile='players';
+        [...document.querySelectorAll('#view-profile .vseg button')].forEach(b=>b.setAttribute('aria-pressed',b.textContent==='Players'));
+        buildProfileOptions();s.value=d.player_id;pfSilo=null;renderProfile();
+        document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});}},
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.isTeam?d.players+' players':d.position_group+' · '+d.team_short}</div>
+      <div class="row"><span>${mx?mx.label:xk}</span><b>${fmtMetric(xk,metricVal(d,xk))}</b></div>
+      <div class="row"><span>${my?my.label:yk}</span><b>${fmtMetric(yk,metricVal(d,yk))}</b></div>
+      ${ms?`<div class="row"><span>${ms.label}</span><b>${fmtMetric(sk,metricVal(d,sk))}</b></div>`:''}`
+  });
+  const parts=[];parts.push(`${rows.length} ${SECVIEW.explore==='teams'?'teams':'players'} plotted`);
+  if(ms)parts.push(`dot size = ${ms.label}`);
+  if(mx&&mx.src==='sample'||my&&my.src==='sample'||(ms&&ms.src==='sample'))parts.push('* = 10-match sample metric');
+  let leg='';
+  if(ck==='position'&&SECVIEW.explore!=='teams')leg='<div class="xp-legend">'+
+    META.positions.map(p=>`<span class="item"><span class="swatch" style="background:${POS_COLOR[p]||'var(--series-1)'}"></span>${p}</span>`).join('')+'</div>';
+  document.getElementById('xpCap').innerHTML=parts.join(' · ')+leg;
+}
+
+// ---------- ACTION HEAT-MAPS ----------
+let hmLayer='touch';
+const LAYER_LABEL={touch:'Touches',defend:'Defending',run:'Runs'};
+const LAYER_RAMP={touch:['--c1'],defend:['--c7'],run:['--c5']};
+// single-entity view — list every sampled player/team with a grid (ignore the position filter)
+function heatPool(){return (SECVIEW.heat==='teams'?teamEntities():DATA).filter(d=>d.shot&&d.shot.grid);}
+function buildHeatOptions(){
+  const sel=document.getElementById('hmSelect'),dl=document.getElementById('hmList');
+  const cur=sel.value;sel.innerHTML='';dl.innerHTML='';
+  const team=SECVIEW.heat==='teams';
+  const rows=[...heatPool()].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  rows.forEach(d=>{sel.appendChild(el('option',{value:d.player_id,text:team?d.player_name:`${d.player_name} — ${d.team_short}`}));
+    dl.appendChild(el('option',{value:d.player_name}));});
+  if(cur&&[...sel.options].some(o=>String(o.value)===String(cur)))sel.value=cur;
+  else if(rows.length)sel.value=rows.sort((a,b)=>((b.shot.grid.touch||[]).reduce((x,y)=>x+y,0))-((a.shot.grid.touch||[]).reduce((x,y)=>x+y,0)))[0].player_id;
+  document.getElementById('hmSearch').placeholder=team?'Search team…':'Search player…';
+  // layer segmented control
+  const lay=document.getElementById('hmLayers');lay.innerHTML='';
+  SAMPLE_META.layers.forEach(L=>{const b=el('button',{text:LAYER_LABEL[L]||L,'aria-pressed':String(hmLayer===L)});
+    b.onclick=()=>{hmLayer=L;[...lay.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===b));renderHeat();};
+    lay.appendChild(b);});
+}
+function initHeat(){
+  buildHeatOptions();
+  document.getElementById('hmSelect').onchange=renderHeat;
+  const s=document.getElementById('hmSearch');
+  s.oninput=()=>{const q=s.value.trim().toLowerCase();if(!q)return;
+    const hit=heatPool().find(d=>d.player_name.toLowerCase().includes(q));
+    if(hit){document.getElementById('hmSelect').value=hit.player_id;renderHeat();}};
+}
+function renderHeat(){
+  const sel=document.getElementById('hmSelect');const pool=heatPool();
+  const d=pool.find(p=>String(p.player_id)===String(sel.value))||pool[0];
+  const svg=document.getElementById('heat');svg.textContent='';
+  const cap=document.getElementById('hmCap');
+  if(!d){cap.textContent='No sampled players in this view.';return;}
+  const cols=SAMPLE_META.grid_cols,rows=SAMPLE_META.grid_rows;
+  const grid=(d.shot.grid&&d.shot.grid[hmLayer])||[];
+  const W=Math.min(svg.parentElement.clientWidth||900,760),H=Math.round(W*(rows/cols)*1.02);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const pad=6,cw=(W-2*pad)/cols,ch=(H-2*pad)/rows;
+  const max=Math.max(1,...grid);
+  const base=getComputedStyle(document.documentElement).getPropertyValue(LAYER_RAMP[hmLayer][0]).trim()||'#4477aa';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const v=grid[r*cols+c]||0;const t=v/max;
+    const rect=S('rect',{x:(pad+c*cw).toFixed(1),y:(pad+r*ch).toFixed(1),width:(cw-1).toFixed(1),height:(ch-1).toFixed(1),
+      rx:2,fill:base,'fill-opacity':(0.06+0.9*Math.sqrt(t)).toFixed(3)});
+    if(v>0){rect.addEventListener('mouseenter',ev=>showTip(`<b>${LAYER_LABEL[hmLayer]}</b>: ${v}`,ev));
+      rect.addEventListener('mousemove',moveTip);rect.addEventListener('mouseleave',hideTip);}
+    svg.appendChild(rect);
+  }
+  // pitch furniture: midline + centre circle + attacking-direction arrow
+  const midX=pad+cols/2*cw;
+  svg.appendChild(S('line',{x1:midX.toFixed(1),x2:midX.toFixed(1),y1:pad,y2:H-pad,class:'pitch-line'}));
+  svg.appendChild(S('circle',{cx:midX.toFixed(1),cy:(H/2).toFixed(1),r:Math.min(cw,ch)*1.1,fill:'none',class:'pitch-line'}));
+  svg.appendChild(S('rect',{x:pad,y:pad,width:(W-2*pad).toFixed(1),height:(H-2*pad).toFixed(1),fill:'none',class:'pitch-line'}));
+  svg.appendChild(S('text',{x:W-pad-4,y:H-pad-4,'text-anchor':'end',class:'axis',text:'attack →'}));
+  const total=grid.reduce((a,b)=>a+b,0);
+  cap.textContent=`${d.player_short_name}${d.isTeam?' (squad)':''} · ${LAYER_LABEL[hmLayer]} · ${total} actions across ${d.shot.apps} tracked ${d.shot.apps===1?'match':'matches'} · attacking left → right`;
+}
+
 // ---------- render all ----------
-function renderAll(){renderLeaderboard();renderShooting();renderRadar();renderAthletic();renderPassing();renderRunMix();}
-initProfile();initRadar();initViewToggles();renderAll();renderProfile();
+function renderAll(){renderLeaderboard();renderShooting();renderRadar();renderAthletic();renderPassing();renderRunMix();renderExplore();renderHeat();}
+initProfile();initRadar();initExplore();initHeat();initViewToggles();renderAll();renderProfile();
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
 </script>
