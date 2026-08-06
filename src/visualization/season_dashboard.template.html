@@ -177,6 +177,13 @@
   .sh-val .g{color:var(--good);font-weight:700}
   @media (max-width:560px){.sh-row{grid-template-columns:104px 1fr 64px}}
   .weights.dim{opacity:.4;pointer-events:none}
+  .wgroup{grid-column:1/-1;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:700;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+  .wgroup:first-child{margin-top:0;padding-top:0;border-top:none}
+  .wgroup .tag{color:var(--c6);font-weight:700}
+  .pf-scopediv{align-self:stretch;display:flex;align-items:center;padding:0 2px;
+    font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);
+    border-left:1px dashed var(--border);text-transform:uppercase;white-space:nowrap}
   .lb-row{display:grid;grid-template-columns:34px minmax(120px,1.4fr) 1fr 44px;align-items:center;gap:12px;
     padding:6px 8px;border-radius:9px;cursor:pointer;transition:background .12s}
   .lb-row:hover{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
@@ -596,6 +603,7 @@ function renderProfile(){
     el('div',{class:'lbl',text:'OVR'})]));
   ALL_NAMES.forEach(s=>{
     const sample=SAMPLE_NAMES.includes(s);
+    if(s===SAMPLE_NAMES[0])faces.appendChild(el('div',{class:'pf-scopediv',html:'10-match<br>sample →'}));
     const v=d['silo__'+s];const avail=v!=null;
     const bar=el('div',{class:'fbar'});const fill=el('i');
     fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
@@ -868,6 +876,8 @@ function refreshWeightUI(){
   });
   const box=document.getElementById('weights');
   ALL_NAMES.forEach(s=>{
+    if(s===SEASON_NAMES[0])box.appendChild(el('div',{class:'wgroup',html:'Full season — all games'}));
+    if(s===SAMPLE_NAMES[0])box.appendChild(el('div',{class:'wgroup',html:'<span class="tag">10-match sample</span> — from the tracked games only'}));
     const ctl=el('div',{class:'wctl',id:'wctl-'+s});
     ctl.appendChild(el('div',{class:'top'},[
       el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}`}),

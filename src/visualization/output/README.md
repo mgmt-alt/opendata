@@ -67,7 +67,15 @@ two clubs in the radar's *Teams* mode. Exported to `team_leaderboard.csv`; a sta
 
 - **Not everything is 10 games.** Pace/Physical/Passing/Creation/Movement come from the
   **full-season** aggregate CSVs (players feature in up to 29 matches). Only
-  Shooting/Defending/Dribbling come from the **10 dynamic-event matches**.
+  Shooting/Defending/Dribbling come from the **10 dynamic-event matches**. The dashboard
+  makes this split explicit — the weight sliders and the player card group the silos into
+  **"Full season"** and **"10-match sample"**, and the sample silos are marked with `*`.
+- **Why not rebuild Pace/Physical on the 10 games too?** It was tried and rejected. The
+  per-match physical lives only in the tracking `.jsonl` files (Git LFS). Pulled and tested,
+  raw broadcast tracking undershoots top speed by ~4–5 km/h, *mis-ranks* players (SkillCorner's
+  PSV99 uses proprietary smoothing the raw data needs) and undercounts distance (players
+  off-screen aren't tracked). A percentile silo that ranks players wrongly is worse than an
+  accurate season-scoped one, so the official numbers are kept and the scope is labelled instead.
 - **Derivations are validated against the raw files.** Recomputing the sample metrics
   straight from the event CSVs matches the pipeline exactly (shots 226, goals 26,
   take-ons 131, regains 1682), and the dashboard's JavaScript reproduces the Python
