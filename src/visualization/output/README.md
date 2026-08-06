@@ -40,11 +40,20 @@ card but **only from the faces broadcast tracking data can actually see**.
 are **volume totals** ranked **league-wide** (not per-appearance rates, and not
 within-position). This is deliberate — see below.
 
-**Two scopes.** The first five silos come from the *all-games* aggregates and cover
-every player. The three sample silos come from the per-match **dynamic events** in the 10
-tracked matches. The dashboard **defaults to all eight silos** (matching the comparison
-radar); its green **Shooting · Defending · Dribbling (10-match)** toggle switches to the
-5-silo, all-players season view. There is **no xG** anywhere in the open data.
+**All eight silos, always.** The first five come from the *all-games* aggregates
+(percentiled within position); the three sample silos come from the per-match **dynamic
+events** in the 10 tracked matches (volume totals, percentiled league-wide). They are all
+factored into every ranking — there is no toggle — so the leaderboard covers the **155
+players** who feature in the tracked matches. (A separate 5-silo, all-220-player export
+lives in `season_leaderboard.csv` for reference.) There is **no xG** anywhere in the data.
+
+**Percentiles use the Weibull plotting position** `rank / (n + 1)`, so the best player in
+a sample sits just under 100 (≈ 99) rather than exactly 100 — a sample's top isn't claimed
+to beat 100% of a larger population — and the worst sits just above 0.
+
+**The player card's OVR is always the position-weighted total** across all eight silos,
+independent of whichever archetype preset the leaderboard is set to (so it never shows a
+single silo's number as the overall).
 
 **Why the sample silos are volume totals, ranked league-wide.** Two failure modes to avoid:
 1. *Per-appearance rates* explode on tiny samples — a player with 4 shots in one tracked

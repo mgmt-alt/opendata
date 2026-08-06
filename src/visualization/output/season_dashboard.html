@@ -227,9 +227,10 @@
       <p>One number per player, <strong>0–100</strong>, built from position-relative silos — each a weighted blend of
         metrics ranked as percentiles <em>within the player's position</em>, combined
         <strong>weighted by position</strong> by default (a striker leans on Creation &amp; Movement, a centre-back on
-        Physical &amp; Passing) or with your own weights. It uses all <strong>eight silos</strong> — the same set as the
-        radar below; the three sample silos (<strong>Shooting · Defending · Dribbling</strong>) come from the 10-match
-        data, so this ranking covers the sampled players. Turn the green toggle off for the 5-silo, all-players season view.</p>
+        Physical &amp; Passing) or with your own weights. All <strong>eight silos</strong> are always in play — the same set
+        as the radar below. Pace/Physical/Passing/Creation/Movement come from the full-season aggregates;
+        <strong>Shooting · Defending · Dribbling</strong> come from the 10 tracked matches, so the ranking covers the
+        players who feature in them.</p>
     </div>
     <div class="card">
       <div class="lb-modes" id="lbModes"></div>
@@ -238,15 +239,13 @@
       <div id="leaderboard"></div>
       <div class="caption" id="lbElig"></div>
       <div class="lb-note" id="lbNote">
-        <strong>Scope:</strong> this season score uses the <em>all-games</em> aggregates, which cover movement &amp;
-        on-ball passing only — so it leaves out <b>Shooting</b>, <b>Dribbling</b> and <b>Defending</b>.
-        Those <em>do</em> exist in the per-match dynamic events (see the Shooting section below), but only for the
-        10 tracked matches, so they're kept out of this season-wide, all-players ranking rather than applied unevenly.
+        <strong>Scope:</strong> Pace/Physical/Passing/Creation/Movement are full-season aggregates (percentiled within
+        position); <b>Shooting</b>, <b>Defending</b> and <b>Dribbling</b> are from the 10 tracked matches (volume over
+        the sample, percentiled league-wide). The ranking therefore covers players who feature in those matches. No xG
+        exists in the open data.
       </div>
-      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in every active silo
-        (with the 10-match toggle on, that means players who feature in the tracked matches).
-        Percentiles use the full positional pool, so a player's standing never depends on the filter.
-        Click any row to load that player's profile below.</div>
+      <div class="caption" id="lbElig-note">Eligibility: 3+ matches (use the “Min matches” filter above) and data in
+        all eight silos. Click any row to load that player's profile below.</div>
     </div>
   </section>
 
@@ -587,9 +586,9 @@ function renderProfile(){
   document.getElementById('pfHead').innerHTML=
     `<span class="name">${d.player_name}</span>
      <span class="meta">${d.position_group} · ${d.team_short} · ${d.matches} matches · ${fmt(d.minutes,0)} min/match</span>`;
-  // FIFA-style faces: OVR + five silo scores + unavailable note
+  // FIFA-style faces: canonical position-weighted OVR + the eight silo faces
   const faces=document.getElementById('pfFaces');faces.innerHTML='';
-  const ovr=overallScore(d);
+  const ovr=positionOverall(d);   // always the weighted total, never a single silo
   faces.appendChild(el('div',{class:'pf-ovr'},[
     el('div',{class:'big',text:ovr==null?'—':Math.round(ovr)}),
     el('div',{class:'lbl',text:'OVR'})]));
@@ -732,9 +731,10 @@ DATA.forEach(d=>{const sh=d.shot;
   d.defval_total  = sh?2*sh.regains + sh.disruptions + 0.5*sh.pressures:null;
   d.dribval_total = sh?sh.carries + 3*sh.progcarries:null;
 });
-// percentile helper for a value within a sorted array of comparators (avg-rank, %)
+// Weibull percentile rank/(n+1): the sample's best sits just under 100 (not exactly 100),
+// the worst just above 0 — a value is never claimed better than 100% of a wider population.
 function pctIn(vals,v){if(v==null||!vals.length)return null;
-  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);return ((lo+hi)/2+1)/vals.length*100;}
+  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);return ((lo+hi)/2+1)/(vals.length+1)*100;}
 // precompute percentiles: sample composites LEAGUE-WIDE, all else within position
 (function computeScores(){
   const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
@@ -763,6 +763,10 @@ function overallScore(d){const w=siloWeights(d);let num=0,den=0;
   activeNames().forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
 function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>d['silo__'+s]!=null);
   const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*d['silo__'+s]);return o;}
+// canonical OVR for the player card: always the POSITION-weighted total over all silos,
+// independent of whatever weighting/preset the leaderboard is currently set to.
+function positionOverall(d){const w=POSITION_WEIGHTS[d.position_group]||balanced();let num=0,den=0;
+  ALL_NAMES.forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
 // Archetype presets are silo-FOCUSED: the named silo(s) dominate so a player can't top
 // an archetype on unrelated strengths (a non-shooter can't be the top "Poacher").
 const LB_MODES={
@@ -841,12 +845,6 @@ function refreshWeightUI(){
     };
     modes.appendChild(c);
   });
-  const tog=el('button',{class:'chip toggle',html:'Shooting · Defending · Dribbling <span style="opacity:.7">(10-match)</span>','aria-pressed':String(includeSample)});
-  tog.onclick=()=>{includeSample=!includeSample;tog.setAttribute('aria-pressed',includeSample);
-    lbLimit=15;refreshWeightUI();renderLeaderboard();renderRadar();
-    document.getElementById('lbNote').style.display=includeSample?'none':'';};
-  modes.appendChild(tog);
-  document.getElementById('lbNote').style.display=includeSample?'none':'';
   const box=document.getElementById('weights');
   ALL_NAMES.forEach(s=>{
     const ctl=el('div',{class:'wctl',id:'wctl-'+s});

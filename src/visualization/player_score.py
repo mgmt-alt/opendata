@@ -94,7 +94,17 @@ BALANCED_WEIGHTS = {s: 1.0 for s in ALL_SILO_NAMES}
 
 
 def _percentile_within(df: pd.DataFrame, col: str, group_col: str) -> pd.Series:
-    return df.groupby(group_col)[col].rank(pct=True, method="average") * 100
+    # Weibull plotting position rank/(n+1): the sample's best sits just under 100 (not
+    # exactly 100, which would claim "better than everyone including a larger population"),
+    # and the worst just above 0.
+    g = df.groupby(group_col)[col]
+    return g.rank(method="average") / (g.transform("count") + 1) * 100
+
+
+def _percentile_league(s: pd.Series) -> pd.Series:
+    """Weibull percentile across the whole (non-null) series."""
+    n = int(s.notna().sum())
+    return s.rank(method="average") / (n + 1) * 100
 
 
 def _weighted_mean(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
@@ -139,7 +149,7 @@ def compute_scores(
     for metrics in silos.values():
         for col in metrics:
             if col in LEAGUE_METRICS:
-                out[f"pct__{col}"] = out[col].rank(pct=True, method="average") * 100
+                out[f"pct__{col}"] = _percentile_league(out[col])
             else:
                 out[f"pct__{col}"] = _percentile_within(out, col, group_col)
 
