@@ -59,7 +59,8 @@ def _load_events() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         poss.append(pp[["match_id", "player_id", "player_name", "team_shortname",
                         "end_type", "lead_to_goal", "carry", "distance_covered"]])
         oe = d[d["event_type"] == "on_ball_engagement"]
-        eng.append(oe[["match_id", "player_id", "end_type"]])
+        eng.append(oe[["match_id", "player_id", "end_type",
+                       "player_in_possession_id", "beaten_by_possession"]])
     return (pd.concat(apps_rows, ignore_index=True),
             pd.concat(poss, ignore_index=True),
             pd.concat(eng, ignore_index=True))
@@ -96,6 +97,13 @@ def sample_table(min_apps: int = 1) -> pd.DataFrame:
     tbl["regains"] = eg["is_regain"].sum().reindex(tbl.index).fillna(0).astype(int)
     tbl["disruptions"] = eg["is_disrupt"].sum().reindex(tbl.index).fillna(0).astype(int)
 
+    # take-ons: a defender was beaten by the carrier's dribble — credit the ball-carrier
+    # (player_in_possession_id). This is a true 1v1 take-on, unlike raw ball carries which
+    # centre-backs/full-backs rack up in build-up without beating anyone.
+    beaten = E[E["beaten_by_possession"] == True]  # noqa: E712
+    takeons = beaten.groupby("player_in_possession_id").size()
+    tbl["takeons"] = takeons.reindex(tbl.index).fillna(0).astype(int)
+
     tbl = tbl.join(apps, how="left")
     tbl["apps"] = tbl["apps"].fillna(1).astype(int)
     tbl = tbl[tbl["apps"] >= min_apps]
@@ -127,7 +135,7 @@ def write_json() -> Path:
             "regains": int(r.regains), "pressures": int(r.pressures),
             "disruptions": int(r.disruptions),
             "carries": int(r.carries), "carry_dist": int(r.carry_dist),
-            "progcarries": int(r.progcarries),
+            "progcarries": int(r.progcarries), "takeons": int(r.takeons),
             **{c: float(getattr(r, c)) for c in SAMPLE_RATE_COLS},
         }
     OUT_DIR.mkdir(parents=True, exist_ok=True)

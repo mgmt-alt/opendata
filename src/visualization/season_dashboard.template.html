@@ -709,7 +709,7 @@ const SEASON_SILOS={
 const SAMPLE_SILOS={
   'Shooting':{shotval_total:1},   // shots + 3*goals (volume drives it, goals worth more)
   'Defending':{defval_total:1},   // 2*regains + disruptions + 0.5*pressures
-  'Dribbling':{dribval_total:1},  // carries + 3*progressive carries
+  'Dribbling':{dribval_total:1},  // take-ons (defenders beaten by the dribble), not raw carries
 };
 const LEAGUE_METRICS=new Set(['shotval_total','defval_total','dribval_total']);
 const ALL_SILOS={...SEASON_SILOS,...SAMPLE_SILOS};
@@ -729,7 +729,7 @@ const POSITION_WEIGHTS={
 DATA.forEach(d=>{const sh=d.shot;
   d.shotval_total = sh?sh.shots + 3*sh.goals:null;
   d.defval_total  = sh?2*sh.regains + sh.disruptions + 0.5*sh.pressures:null;
-  d.dribval_total = sh?sh.carries + 3*sh.progcarries:null;
+  d.dribval_total = sh?sh.takeons:null;   // 1v1 take-ons (defenders beaten), not raw carries
 });
 // Weibull percentile rank/(n+1): the sample's best sits just under 100 (not exactly 100),
 // the worst just above 0 — a value is never claimed better than 100% of a wider population.

@@ -135,14 +135,18 @@ def compute_scores(
 
     if include_sample:
         sample = load_sample()
-        raw = ["shots", "goals", "regains", "pressures", "disruptions", "carries", "progcarries"]
+        raw = ["shots", "goals", "regains", "pressures", "disruptions", "carries",
+               "progcarries", "takeons"]
         out = out.merge(sample[raw], left_on="player_id", right_index=True, how="left")
         # composite sample TOTALS (volume over the tracked matches). Goal weight 3 keeps
         # goals worth more than a blank shot while letting shot VOLUME drive the rating,
         # so a 2-shot cameo can't rate as an elite shooter.
         out["shotval_total"] = out["shots"] + 3 * out["goals"]
         out["defval_total"] = 2 * out["regains"] + out["disruptions"] + 0.5 * out["pressures"]
-        out["dribval_total"] = out["carries"] + 3 * out["progcarries"]
+        # Dribbling = 1v1 take-ons (defenders beaten by the dribble), NOT raw ball carries
+        # — carries flatter centre-backs/full-backs who progress in build-up without beating
+        # anyone. Players who never beat a defender all tie at the bottom, as they should.
+        out["dribval_total"] = out["takeons"].astype(float)
 
     # 1) per-metric percentiles — sample composites league-wide, everything else within
     #    position (sample metrics auto-restrict to the sample pool since rank skips NaN)

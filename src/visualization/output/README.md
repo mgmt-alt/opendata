@@ -34,7 +34,7 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
 | **Shooting** † | SHO | **shot value** = `shots + 3·goals` (sample totals) |
 | **Defending** † | DEF | `2·regains + disruptions + 0.5·pressures` (sample totals) |
-| **Dribbling** † | DRI | `carries + 3·progressive carries` (sample totals) |
+| **Dribbling** † | DRI | 1v1 **take-ons** — defenders beaten by the dribble (sample totals) |
 
 † 10-match sample only (~155 players). Unlike the season silos, the three sample silos
 are **volume totals** ranked **league-wide** (not per-appearance rates, and not
@@ -68,6 +68,13 @@ would let a high-volume non-scorer out-rank a scorer). It is `shots + 3·goals`:
 volume drives it, a goal is worth more than a blank shot, every goalscorer still ranks
 above a player with none, and zero shots/goals sits at the floor. (Shots on target would
 sit between goals and shots, but the open data has no on-target flag or xG.)
+
+**Dribbling is 1v1 take-ons, not ball carries.** Raw carries measure ball-*carrying*
+volume, which centre-backs and full-backs rack up in build-up without beating anyone — so
+they wrongly floated to the top. Instead Dribbling counts **defenders beaten by the
+dribble** (`beaten_by_possession` engagements credited to the ball-carrier). Result:
+centre-backs sit at the bottom (mean ≈ 35), and wingers, attacking full-backs and forwards
+who actually take players on lead. Players who never beat a defender tie at the floor.
 
 **Archetype presets are single-silo**, so each reflects exactly that skill's ranking:
 *Poacher* = Shooting, *Ball-winner* = Defending, *Dribbler* = Dribbling, *Playmaker* =
