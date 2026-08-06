@@ -55,11 +55,13 @@ to beat 100% of a larger population — and the worst sits just above 0.
 independent of whichever archetype preset the leaderboard is set to (so it never shows a
 single silo's number as the overall).
 
-**Teams have the same silos.** Every player metric has a team equivalent — each club's
-**minutes-weighted average** of its players' silo scores, on the same 0–100 scale, with a
-minutes-weighted Overall. Browse them in the *Teams* section (sort by any silo) and compare
-two clubs in the radar's *Teams* mode. Exported to `team_leaderboard.csv`; a static
-`team_profile.png` is in `assets/viz/`.
+**A global Players / Teams view toggle.** A single toggle at the top of the dashboard
+switches **every graph** — leaderboard, athletic & passing maps, shooting, run-mix, the
+profile card and the comparison radar — between player-level and team-level. A team is the
+**minutes-weighted average** of its players' silo scores (season silos) and the summed
+event totals (sample silos), on the same 0–100 scale, with a minutes-weighted Overall.
+Team ranks/percentiles are computed against the other clubs. Exported to
+`team_leaderboard.csv`; a static `team_profile.png` is in `assets/viz/`.
 
 ![Team squad profiles](../../../assets/viz/team_profile.png)
 
