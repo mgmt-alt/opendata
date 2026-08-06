@@ -51,8 +51,12 @@ SEASON_SILOS: dict[str, dict[str, float]] = {
 }
 
 # Sample silos (from the 10-match dynamic events; per-appearance metrics).
+# Shooting is a SINGLE composite (shots + 9*goals) percentiled as one value, not an
+# average of separate shot/goal percentiles — otherwise a high-volume non-scorer could
+# out-rank a scorer. This way any goalscorer ranks above any non-scorer, and a player
+# with no shots or goals sits at the floor.
 SAMPLE_SILOS: dict[str, dict[str, float]] = {
-    "Shooting": {"shots_pa": 2, "goals_pa": 2},
+    "Shooting": {"shotval_pa": 1},
     "Defending": {"regains_pa": 2, "pressures_pa": 1, "disruptions_pa": 1},
     "Dribbling": {"carrydist_pa": 2, "carries_pa": 1, "progcarry_pa": 1.5},
 }

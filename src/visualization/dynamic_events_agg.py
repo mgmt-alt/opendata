@@ -36,10 +36,15 @@ MATCHES_GLOB = str(REPO_ROOT / "data" / "matches" / "*" / "*_dynamic_events.csv"
 OUT_DIR = Path(__file__).resolve().parent / "output"
 
 PROG_CARRY_M = 10.0  # a carry covering >= this many metres counts as "progressive"
+# A goal is worth this many blank shots in the shooting metric (~league conversion),
+# so goals dominate: any scorer out-ranks any non-scorer, and shot volume still counts.
+# (Shots on target would sit between goals and shots, but the open data has no on-target
+# flag and no xG, so the hierarchy here is goals >> shots.)
+GOAL_SHOT_WEIGHT = 9.0
 
 # Per-appearance metric -> (raw column produced below). Used by player_score's silos.
 SAMPLE_RATE_COLS = [
-    "shots_pa", "goals_pa", "regains_pa", "pressures_pa", "disruptions_pa",
+    "shotval_pa", "shots_pa", "goals_pa", "regains_pa", "pressures_pa", "disruptions_pa",
     "carries_pa", "carrydist_pa", "progcarry_pa",
 ]
 
@@ -101,6 +106,8 @@ def sample_table(min_apps: int = 1) -> pd.DataFrame:
                       ("disruptions", "disruptions_pa"), ("carries", "carries_pa"),
                       ("carry_dist", "carrydist_pa"), ("progcarries", "progcarry_pa")]:
         tbl[rate] = (tbl[raw] / tbl["apps"]).round(3)
+    # single shooting value: goals dominate, shots still count (goals >> shots)
+    tbl["shotval_pa"] = (tbl["shots_pa"] + GOAL_SHOT_WEIGHT * tbl["goals_pa"]).round(3)
     return tbl.reset_index()
 
 

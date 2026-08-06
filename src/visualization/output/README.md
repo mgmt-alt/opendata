@@ -32,14 +32,24 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Passing** | PAS | beating xPass, completion %, volume, range |
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
+| **Shooting** † | SHO | one **shot value** = `shots + 9·goals` per app (goals ≫ shots) |
+| **Defending** † | DEF | pressing engagements + ball regains + disruptions |
+| **Dribbling** † | DRI | carries + carry distance + progressive carries |
 
-**Two scopes.** The five silos above come from the *all-games* aggregates and cover
-every player. The per-match **dynamic events** add three more faces — **Shooting**
-(shots/goals), **Defending** (pressing → regains) and **Dribbling** (carries + carry
-distance) — for the ~155 players in the 10 tracked matches. Flip the dashboard's green
-**+ Shooting · Defending · Dribbling** toggle to switch to the **8-silo full profile**
-(that ranking is limited to sampled players). There is **no xG** anywhere in the open
-data, so Shooting is volume + goals, not finishing quality.
+† 10-match sample only (~155 players).
+
+**Two scopes.** The first five silos come from the *all-games* aggregates and cover
+every player. The three sample silos come from the per-match **dynamic events** in the 10
+tracked matches. The dashboard **defaults to all eight silos** (matching the comparison
+radar); its green **Shooting · Defending · Dribbling (10-match)** toggle switches to the
+5-silo, all-players season view. There is **no xG** anywhere in the open data.
+
+**Shooting is a single composite, not an average of separate percentiles.** Averaging a
+shots-percentile and a goals-percentile lets a high-volume non-scorer out-rank a scorer,
+so instead we percentile one value, `shots + 9·goals` per appearance (a goal ≈ 9 blank
+shots, ~league conversion). This guarantees every goalscorer ranks above every
+non-scorer, and a player with no shots or goals sits at the floor. (Shots on target would
+sit between goals and shots, but the open data has no on-target flag.)
 
 Position weights extend to all eight silos (e.g. a centre-back's Defending is heavily
 weighted, a forward's Shooting). Both rankings export to

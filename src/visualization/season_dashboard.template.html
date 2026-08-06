@@ -227,9 +227,9 @@
       <p>One number per player, <strong>0–100</strong>, built from position-relative silos — each a weighted blend of
         metrics ranked as percentiles <em>within the player's position</em>, combined
         <strong>weighted by position</strong> by default (a striker leans on Creation &amp; Movement, a centre-back on
-        Physical &amp; Passing) or with your own weights. Five season silos cover every player; flip the green toggle to
-        add <strong>Shooting · Defending · Dribbling</strong> from the 10-match sample (that ranking is limited to the
-        sampled players).</p>
+        Physical &amp; Passing) or with your own weights. It uses all <strong>eight silos</strong> — the same set as the
+        radar below; the three sample silos (<strong>Shooting · Defending · Dribbling</strong>) come from the 10-match
+        data, so this ranking covers the sampled players. Turn the green toggle off for the 5-silo, all-players season view.</p>
     </div>
     <div class="card">
       <div class="lb-modes" id="lbModes"></div>
@@ -707,7 +707,7 @@ const SEASON_SILOS={
   'Movement':{dangerous_runs:2,runs_received:2,run_shot:2,runs_targeted:1,runs_box:1,runs:1},
 };
 const SAMPLE_SILOS={
-  'Shooting':{shots_pa:2,goals_pa:2},
+  'Shooting':{shotval_pa:1},   // single composite (shots + 9*goals) so scorers rank above non-scorers
   'Defending':{regains_pa:2,pressures_pa:1,disruptions_pa:1},
   'Dribbling':{carrydist_pa:2,carries_pa:1,progcarry_pa:1.5},
 };
@@ -725,7 +725,7 @@ const POSITION_WEIGHTS={
   'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5,Shooting:3,Defending:0.5,Dribbling:1.5},
 };
 // flatten the 10-match sample rate metrics onto each player (null when not in the sample)
-const SAMPLE_METRICS=['shots_pa','goals_pa','regains_pa','pressures_pa','disruptions_pa','carrydist_pa','carries_pa','progcarry_pa'];
+const SAMPLE_METRICS=['shotval_pa','shots_pa','goals_pa','regains_pa','pressures_pa','disruptions_pa','carrydist_pa','carries_pa','progcarry_pa'];
 DATA.forEach(d=>SAMPLE_METRICS.forEach(m=>{d[m]=d.shot?d.shot[m]:null;}));
 // precompute percentiles within position for every metric, then all silo scores
 (function computeScores(){
@@ -740,7 +740,7 @@ DATA.forEach(d=>SAMPLE_METRICS.forEach(m=>{d[m]=d.shot?d.shot[m]:null;}));
     for(const m in ALL_SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}
     d['silo__'+s]=den>0?num/den:null;});});
 })();
-let includeSample=false;                    // 8 silos (sample) vs 5 season silos
+let includeSample=true;                     // default to the full 8 silos (matches the radar)
 let scoreMode='role';                       // 'role' (position-aware) or 'custom'
 const customW={};ALL_NAMES.forEach(s=>customW[s]=1);
 function activeNames(){return includeSample?ALL_NAMES:SEASON_NAMES;}
@@ -825,11 +825,12 @@ function refreshWeightUI(){
     };
     modes.appendChild(c);
   });
-  const tog=el('button',{class:'chip toggle',html:'+ Shooting · Defending · Dribbling <span style="opacity:.7">(10-match)</span>','aria-pressed':'false'});
+  const tog=el('button',{class:'chip toggle',html:'Shooting · Defending · Dribbling <span style="opacity:.7">(10-match)</span>','aria-pressed':String(includeSample)});
   tog.onclick=()=>{includeSample=!includeSample;tog.setAttribute('aria-pressed',includeSample);
     lbLimit=15;refreshWeightUI();renderLeaderboard();renderRadar();
     document.getElementById('lbNote').style.display=includeSample?'none':'';};
   modes.appendChild(tog);
+  document.getElementById('lbNote').style.display=includeSample?'none':'';
   const box=document.getElementById('weights');
   ALL_NAMES.forEach(s=>{
     const ctl=el('div',{class:'wctl',id:'wctl-'+s});
