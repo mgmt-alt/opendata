@@ -21,12 +21,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 from src.visualization.build_dashboard_data import load_merged, RUN_FAMILIES  # noqa: F401
-from src.visualization.player_score import compute_scores, METRIC_GROUPS
+from src.visualization.player_score import (
+    compute_scores, SILOS, SILO_NAMES, POSITION_WEIGHTS, BALANCED_WEIGHTS, UNAVAILABLE,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "assets" / "viz"
@@ -127,11 +130,11 @@ def fig_passing(df):
 
 
 PROFILE_METRICS = [
-    ("top_speed", "Peak speed"), ("distance", "Distance"), ("m_per_min", "Work rate"),
-    ("sprints", "Sprints"), ("hi_count", "High-intensity"), ("high_accel", "Explosive accel"),
-    ("pass_vol", "Pass volume"), ("pass_pct", "Completion %"), ("pass_over", "Beats xPass"),
-    ("linebreaks", "Line breaks"), ("dangerous_passes", "Dangerous passes"),
-    ("runs", "Total runs"), ("dangerous_runs", "Dangerous runs"), ("runs_received", "Runs received"),
+    ("top_speed", "Peak speed"), ("sprints", "Sprints"), ("high_accel", "Explosive accel"),
+    ("distance", "Distance"), ("m_per_min", "Work rate"), ("hi_count", "High-intensity"),
+    ("pass_over", "Beats xPass"), ("pass_pct", "Completion %"), ("pass_vol", "Pass volume"),
+    ("linebreaks", "Line breaks"), ("dangerous_passes", "Dangerous passes"), ("pass_shot", "Passes to shots"),
+    ("dangerous_runs", "Dangerous runs"), ("runs_received", "Runs received"), ("run_shot", "Runs to shots"),
 ]
 
 
@@ -187,45 +190,110 @@ def fig_profile(df, player_name=None):
     _save(fig, "player_profile.png")
 
 
-def fig_leaderboard(df, n=20):
-    """Top-n SkillCorner Score leaderboard, each bar split into the three weighted
-    sub-score contributions (Athletic + Passing + Off-ball) that sum to the score."""
-    ranked = compute_scores(df).head(n).iloc[::-1]  # best at top
-    groups = list(METRIC_GROUPS)                     # Athletic, Passing, Off-ball
-    colors = {"Athletic": CAT[0], "Passing": CAT[1], "Off-ball": CAT[2]}
-    contrib = {g: ranked[f"score__{g}"].to_numpy() / len(groups) for g in groups}
+SILO_COLORS = {name: CAT[i] for i, name in enumerate(SILO_NAMES)}
 
-    fig, ax = plt.subplots(figsize=(11, 8.5))
+
+def _silo_contributions(row):
+    """Normalised position-aware weight * silo score for each silo (sums to Overall)."""
+    w = POSITION_WEIGHTS.get(row["position_group"], BALANCED_WEIGHTS)
+    present = {s: row[f"silo__{s}"] for s in SILO_NAMES if pd.notna(row[f"silo__{s}"])}
+    tot_w = sum(w[s] for s in present) or 1.0
+    return {s: (w[s] / tot_w) * present[s] for s in present}
+
+
+def fig_leaderboard(df, n=20):
+    """Top-n SkillCorner Score leaderboard, each bar split into the five weighted
+    silo contributions (position-aware weights) that sum to the Overall Score."""
+    ranked = compute_scores(df).head(n).iloc[::-1]  # best at top
+
+    fig, ax = plt.subplots(figsize=(11.5, 9))
     y = np.arange(len(ranked))
     left = np.zeros(len(ranked))
-    for g in groups:
-        ax.barh(y, contrib[g], left=left, height=0.66, color=colors[g],
-                edgecolor=SURFACE, linewidth=1.2, zorder=3, label=g)
-        left += contrib[g]
-    # overall score at bar end
+    contribs = [_silo_contributions(r) for _, r in ranked.iterrows()]
+    for s in SILO_NAMES:
+        vals = np.array([c.get(s, 0.0) for c in contribs])
+        ax.barh(y, vals, left=left, height=0.66, color=SILO_COLORS[s],
+                edgecolor=SURFACE, linewidth=1.0, zorder=3, label=s)
+        left += vals
     for yi, tot in zip(y, left):
         ax.text(tot + 0.6, yi, f"{tot:.1f}", va="center", ha="left",
                 fontsize=10, fontweight="bold", color=INK)
-    labels = [f"{int(r.rank)}. {r.player_name}  ·  {r.team_short}"
+    labels = [f"{int(r.rank)}. {r.player_name}  ·  {r.team_short}  ({r.position_group})"
               for r in ranked.itertuples()]
     ax.set_yticks(y)
-    ax.set_yticklabels(labels, fontsize=9.5, color=INK2)
+    ax.set_yticklabels(labels, fontsize=9, color=INK2)
     ax.set_xlim(0, max(left) + 5)
-    ax.set_xlabel("SkillCorner Score  (0–100, equal weights)", fontsize=10)
+    ax.set_xlabel("SkillCorner Score  (0–100, position-aware weights)", fontsize=10)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(left=False)
     ax.grid(True, axis="x", color=GRID, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=3, frameon=False,
-              fontsize=10, handlelength=1.1, columnspacing=1.8)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=5, frameon=False,
+              fontsize=9.5, handlelength=1.0, columnspacing=1.4)
     ax.set_title("A-League 2024/25 leaderboard — the SkillCorner Score",
                  fontsize=16, fontweight="bold", color=INK, loc="left", pad=26)
-    ax.text(0, 1.02, "Composite of position-relative percentiles across physical, "
-            "passing & off-ball metrics · 3+ matches",
-            transform=ax.transAxes, fontsize=10.5, color=INK2)
+    ax.text(0, 1.02, "Five position-relative silos, weighted by position · 3+ matches · "
+            "not measurable from tracking: shooting, dribbling, defending",
+            transform=ax.transAxes, fontsize=10, color=INK2)
     fig.text(0.99, 0.005, CREDIT, ha="right", fontsize=8, color=MUTED)
     fig.tight_layout(rect=[0, 0.05, 1, 0.95])
     _save(fig, "leaderboard.png")
+
+
+def fig_player_card(df, player_name=None):
+    """A FIFA-style card: the five measurable silo faces + Overall, with the three
+    faces this dataset cannot populate shown greyed-out for honesty."""
+    ranked = compute_scores(df)
+    if player_name:
+        row = ranked[ranked["player_name"] == player_name].iloc[0]
+    else:
+        row = ranked.iloc[0]  # league #1
+    faces = [(s, row[f"silo__{s}"]) for s in SILO_NAMES]
+    ovr = row["score_overall"]
+
+    fig, ax = plt.subplots(figsize=(6.4, 8))
+    ax.axis("off")
+    # card background
+    ax.add_patch(mpl.patches.FancyBboxPatch(
+        (0.06, 0.04), 0.88, 0.92, boxstyle="round,pad=0.02,rounding_size=0.04",
+        transform=ax.transAxes, facecolor=SURFACE, edgecolor="#c3c2b7", linewidth=1.5, zorder=1))
+    # OVR + name header
+    ax.text(0.14, 0.88, f"{ovr:.0f}", fontsize=52, fontweight="bold", color=BLUE,
+            transform=ax.transAxes, va="center")
+    ax.text(0.14, 0.80, "OVR", fontsize=13, fontweight="bold", color=INK2, transform=ax.transAxes)
+    ax.text(0.42, 0.885, row["player_name"], fontsize=16, fontweight="bold", color=INK,
+            transform=ax.transAxes, va="center")
+    ax.text(0.42, 0.835, f"{row['position_group']} · {row['team_short']}", fontsize=11,
+            color=INK2, transform=ax.transAxes, va="center")
+    ax.text(0.42, 0.80, f"#{int(row['rank'])} in the A-League · {int(row['matches'])} matches",
+            fontsize=10, color=MUTED, transform=ax.transAxes, va="center")
+    ax.plot([0.12, 0.88], [0.75, 0.75], color="#c3c2b7", lw=1, transform=ax.transAxes)
+    # five measurable faces
+    y0 = 0.685
+    for i, (name, val) in enumerate(faces):
+        yy = y0 - i * 0.072
+        ax.text(0.145, yy, f"{val:.0f}", fontsize=22, fontweight="bold",
+                color=SILO_COLORS[name], transform=ax.transAxes, va="center", ha="right")
+        ax.text(0.20, yy, name.upper(), fontsize=13, fontweight="bold", color=INK,
+                transform=ax.transAxes, va="center")
+        # mini bar
+        ax.add_patch(plt.Rectangle((0.55, yy - 0.017), 0.33, 0.026, transform=ax.transAxes,
+                     facecolor=GRID, edgecolor="none", zorder=2))
+        ax.add_patch(plt.Rectangle((0.55, yy - 0.017), 0.33 * val / 100, 0.026,
+                     transform=ax.transAxes, facecolor=SILO_COLORS[name], edgecolor="none", zorder=3))
+    # unavailable faces (greyed)
+    ax.plot([0.12, 0.88], [0.30, 0.30], color="#e1e0d9", lw=1, transform=ax.transAxes)
+    ax.text(0.14, 0.265, "Not captured by broadcast tracking", fontsize=9.5,
+            fontweight="bold", color=MUTED, transform=ax.transAxes)
+    for i, (name, why) in enumerate(UNAVAILABLE.items()):
+        yy = 0.215 - i * 0.05
+        ax.text(0.145, yy, "—", fontsize=18, fontweight="bold", color="#c3c2b7",
+                transform=ax.transAxes, va="center", ha="right")
+        ax.text(0.20, yy, name.upper(), fontsize=12, color="#b7b6b0", fontweight="bold",
+                transform=ax.transAxes, va="center")
+    fig.text(0.5, 0.015, "SkillCorner Score · faces = position-relative percentile silos",
+             ha="center", fontsize=8, color=MUTED)
+    _save(fig, "player_card.png")
 
 
 def _save(fig, name):
@@ -240,6 +308,7 @@ def main():
     df = load_merged()
     print(f"Loaded {len(df)} players. Rendering figures ->")
     fig_leaderboard(df)
+    fig_player_card(df)
     fig_athletic(df)
     fig_passing(df)
     fig_profile(df)

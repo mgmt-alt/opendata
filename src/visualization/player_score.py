@@ -1,30 +1,41 @@
 """
-SkillCorner Score — a transparent composite rating that ranks A-League 2024/25
+SkillCorner Score — a FIFA-flavoured composite rating that ranks A-League 2024/25
 players like a leaderboard.
+
+Why these silos
+---------------
+FIFA cards use six faces (PAC / SHO / PAS / DRI / DEF / PHY). Broadcast tracking
+data can only *see* some of those. This score is built from the faces the data
+genuinely supports, and is honest about the rest:
+
+    Pace       ✅  peak sprint speed, sprint volume, explosive accelerations   (~ FIFA PAC)
+    Physical   ✅  distance, work rate, high-intensity volume, braking          (~ FIFA PHY)
+    Passing    ✅  completion, beating xPass, volume, range                     (~ FIFA PAS)
+    Creation   ✅  line-breaking / dangerous passes, passes into shots          (~ vision/creativity)
+    Movement   ✅  off-ball run threat, runs received, runs into shots          (SkillCorner-only face)
+
+    Shooting   ❌  no shots / xG / goals-scored per player in the aggregates
+    Dribbling  ❌  no take-on / 1v1 events
+    Defending  ❌  no tackles / interceptions / duels (this is in-possession + physical data)
+
+See ``UNAVAILABLE`` for the faces we deliberately do not fake.
 
 Method
 ------
-1. Every metric is turned into a **percentile within the player's position group**
-   (0-100), so players are only ever compared to positional peers.
-2. Percentiles roll up into three **sub-scores**, each the mean of its metrics:
-     - Athletic          (physical output)
-     - Passing            (passing volume, security & progression)
-     - Off-ball           (off-ball running threat)
-3. The **Overall Score** is a weighted average of the three sub-scores:
-
-       Score = w_ath * Athletic + w_pass * Passing + w_obr * Off-ball
-
-   with the weights renormalised over whichever sub-scores a player actually has
-   data for. Default weights are equal (1/3 each) and are fully adjustable.
-
-All metrics here are "higher is better" (see METRIC_GROUPS). ``pass_over`` already
-encodes completing *more* than expected, so no inversion is needed anywhere.
+1. Every metric -> **percentile within the player's position group** (0-100).
+2. Each silo score = **weighted mean** of its metrics' percentiles (intra-silo
+   weights in ``SILOS``) — so, e.g., beating xPass counts more than raw volume.
+3. Overall = weighted mean of the five silo scores. Weights are **position-aware**
+   by default (``POSITION_WEIGHTS`` — a centre-back leans on Physical/Passing, a
+   forward on Movement/Creation), or a single custom weight set can be supplied.
+   Weights renormalise over whichever silos a player has data for.
 
 Usage
 -----
-    python -m src.visualization.player_score            # writes leaderboard CSV
+    python -m src.visualization.player_score                 # role-based leaderboard CSV
     from src.visualization.player_score import compute_scores
-    ranked = compute_scores(load_merged())
+    compute_scores(df)                                       # position-aware weights
+    compute_scores(df, silo_weights={"Movement": 3, ...})    # one custom weighting
 """
 from __future__ import annotations
 
@@ -38,74 +49,106 @@ from src.visualization.build_dashboard_data import load_merged
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = Path(__file__).resolve().parent / "output"
 
-# Sub-score -> (metric column, display label). All oriented "higher = better".
-METRIC_GROUPS: dict[str, list[tuple[str, str]]] = {
-    "Athletic": [
-        ("top_speed", "Peak speed"), ("m_per_min", "Work rate"), ("distance", "Distance"),
-        ("hsr_dist", "High-speed dist"), ("sprints", "Sprints"),
-        ("hi_count", "High-intensity"), ("high_accel", "Explosive accel"),
-    ],
-    "Passing": [
-        ("pass_vol", "Pass volume"), ("pass_pct", "Completion %"), ("pass_over", "Beats xPass"),
-        ("linebreaks", "Line breaks"), ("dangerous_passes", "Dangerous passes"),
-    ],
-    "Off-ball": [
-        ("runs", "Total runs"), ("dangerous_runs", "Dangerous runs"),
-        ("runs_received", "Runs received"),
-    ],
+# Silo -> {metric column: intra-silo weight}. All metrics are "higher = better".
+SILOS: dict[str, dict[str, float]] = {
+    "Pace": {          # explosive top-end speed  (~ FIFA PAC)
+        "top_speed": 3, "sprints": 2, "expl_sprint": 1.5, "high_accel": 1,
+    },
+    "Physical": {      # engine, stamina, intensity, braking  (~ FIFA PHY)
+        "distance": 2, "m_per_min": 2, "hi_count": 2, "hsr_dist": 1, "high_decel": 1,
+    },
+    "Passing": {       # security & range  (~ FIFA PAS)
+        "pass_over": 3, "pass_pct": 2, "pass_vol": 1, "pass_dist": 1,
+    },
+    "Creation": {      # chance generation / vision
+        "dangerous_passes": 2, "linebreaks": 2, "pass_shot": 2, "pass_torun": 1, "pass_goal": 1,
+    },
+    "Movement": {      # off-ball running threat  (SkillCorner-only face)
+        "dangerous_runs": 2, "runs_received": 2, "run_shot": 2, "runs_targeted": 1,
+        "runs_box": 1, "runs": 1,
+    },
+}
+SILO_NAMES = list(SILOS)
+
+# FIFA faces this tracking dataset cannot honestly populate.
+UNAVAILABLE = {
+    "Shooting": "no shots / xG / goals-scored per player in the aggregates",
+    "Dribbling": "no take-on / 1v1 duel events",
+    "Defending": "no tackles / interceptions / duels (in-possession + physical data only)",
 }
 
-DEFAULT_WEIGHTS = {"Athletic": 1 / 3, "Passing": 1 / 3, "Off-ball": 1 / 3}
+# Position-aware silo weights for the Overall (renormalised internally).
+POSITION_WEIGHTS: dict[str, dict[str, float]] = {
+    "Central Defender": {"Pace": 1.0, "Physical": 2.5, "Passing": 2.5, "Creation": 0.5, "Movement": 0.5},
+    "Full Back":        {"Pace": 2.0, "Physical": 2.0, "Passing": 1.5, "Creation": 1.5, "Movement": 1.5},
+    "Midfield":         {"Pace": 1.0, "Physical": 1.5, "Passing": 2.5, "Creation": 2.0, "Movement": 1.5},
+    "Wide Attacker":    {"Pace": 2.0, "Physical": 1.0, "Passing": 1.0, "Creation": 2.0, "Movement": 2.5},
+    "Center Forward":   {"Pace": 1.5, "Physical": 1.5, "Passing": 1.0, "Creation": 2.0, "Movement": 2.5},
+}
+BALANCED_WEIGHTS = {s: 1.0 for s in SILO_NAMES}
 
 
-def _percentile_within(df: pd.DataFrame, col: str, group_col: str = "position_group") -> pd.Series:
+def _percentile_within(df: pd.DataFrame, col: str, group_col: str) -> pd.Series:
     """Percentile rank (0-100) of each value within its position group."""
     return df.groupby(group_col)[col].rank(pct=True, method="average") * 100
 
 
+def _weighted_mean(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Row-wise weighted mean that ignores NaN, renormalising over present terms."""
+    mask = ~np.isnan(values)
+    wm = np.where(mask, weights, 0.0)
+    denom = wm.sum(axis=1)
+    num = np.nansum(np.where(mask, values, 0.0) * wm, axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(denom > 0, num / denom, np.nan)
+
+
 def compute_scores(
     df: pd.DataFrame,
-    weights: dict[str, float] | None = None,
+    silo_weights: dict[str, float] | None = None,
     group_col: str = "position_group",
     min_matches: int = 3,
     require_all: bool = True,
 ) -> pd.DataFrame:
-    """Return the ranked leaderboard: per-metric percentiles, three sub-scores and
-    an Overall Score, sorted descending with dense ``rank`` columns.
+    """Return the ranked leaderboard with per-metric percentiles, five silo scores
+    and an Overall Score.
 
-    Percentiles are always computed against the **full** positional pool so a
-    player's standing never depends on the filter. Only *eligible* players are
-    ranked, where eligible means ``matches >= min_matches`` and — when
-    ``require_all`` — all three sub-scores are present (a composite that ignores a
-    whole facet a player never showed would flatter cameo appearances).
+    ``silo_weights`` None  -> position-aware weights (``POSITION_WEIGHTS``).
+    ``silo_weights`` dict  -> one custom weighting applied to every player.
+
+    Percentiles are computed against the full positional pool; only eligible
+    players (``matches >= min_matches`` and, when ``require_all``, data in every
+    silo) are ranked.
     """
-    weights = weights or DEFAULT_WEIGHTS
     out = df.copy()
 
-    # per-metric percentiles (within position, on the full pool)
-    for group, metrics in METRIC_GROUPS.items():
-        for col, _ in metrics:
+    # 1) per-metric percentiles within position
+    for silo, metrics in SILOS.items():
+        for col in metrics:
             out[f"pct__{col}"] = _percentile_within(out, col, group_col)
 
-    # sub-scores = mean of available metric percentiles in the group
-    for group, metrics in METRIC_GROUPS.items():
-        cols = [f"pct__{col}" for col, _ in metrics]
-        out[f"score__{group}"] = out[cols].mean(axis=1, skipna=True)
+    # 2) silo scores = intra-silo weighted mean of metric percentiles
+    for silo, metrics in SILOS.items():
+        cols = [f"pct__{c}" for c in metrics]
+        w = np.array(list(metrics.values()), dtype=float)
+        out[f"silo__{silo}"] = _weighted_mean(out[cols].to_numpy(dtype=float), w)
 
-    # overall = weight-renormalised mean of available sub-scores
-    sub_cols = [f"score__{g}" for g in METRIC_GROUPS]
-    w = np.array([weights[g] for g in METRIC_GROUPS], dtype=float)
-    sub = out[sub_cols].to_numpy(dtype=float)
-    mask = ~np.isnan(sub)
-    wmat = np.where(mask, w, 0.0)
-    denom = wmat.sum(axis=1)
-    overall = np.where(denom > 0, np.nansum(np.where(mask, sub, 0.0) * wmat, axis=1) / denom, np.nan)
-    out["score_overall"] = np.round(overall, 1)
+    # 3) overall = weighted mean of silo scores (position-aware or custom)
+    silo_cols = [f"silo__{s}" for s in SILO_NAMES]
+    silo_vals = out[silo_cols].to_numpy(dtype=float)
+    if silo_weights is None:
+        wmat = out[group_col].map(
+            lambda p: [POSITION_WEIGHTS.get(p, BALANCED_WEIGHTS)[s] for s in SILO_NAMES]
+        )
+        wmat = np.array(wmat.tolist(), dtype=float)
+    else:
+        wmat = np.tile([silo_weights.get(s, 0.0) for s in SILO_NAMES], (len(out), 1))
+    out["score_overall"] = np.round(_weighted_mean(silo_vals, wmat), 1)
 
-    # eligibility filter (percentiles above already reflect the full pool)
+    # eligibility, then rank
     eligible = out["matches"] >= min_matches
     if require_all:
-        eligible &= mask.all(axis=1)
+        eligible &= ~np.isnan(silo_vals).any(axis=1)
     out = out[eligible].copy()
 
     out = out.sort_values("score_overall", ascending=False, na_position="last").reset_index(drop=True)
@@ -116,37 +159,33 @@ def compute_scores(
     return out
 
 
-def leaderboard(df: pd.DataFrame, n: int = 25) -> pd.DataFrame:
-    """Tidy top-``n`` leaderboard view with the columns worth reading."""
-    ranked = compute_scores(df)
-    cols = [
-        "rank", "player_name", "team_short", "position_group",
-        "score_overall", "score__Athletic", "score__Passing", "score__Off-ball",
-        "matches",
-    ]
+def leaderboard(df: pd.DataFrame, n: int = 25, **kwargs) -> pd.DataFrame:
+    """Tidy top-``n`` leaderboard view with the five silo faces."""
+    ranked = compute_scores(df, **kwargs)
+    cols = ["rank", "player_name", "team_short", "position_group", "score_overall",
+            *[f"silo__{s}" for s in SILO_NAMES], "matches"]
     view = ranked[cols].head(n).copy()
     return view.rename(columns={
         "player_name": "player", "team_short": "team", "position_group": "position",
-        "score_overall": "score", "score__Athletic": "athletic",
-        "score__Passing": "passing", "score__Off-ball": "off_ball",
-    }).round({"athletic": 1, "passing": 1, "off_ball": 1})
+        "score_overall": "score", **{f"silo__{s}": s.lower() for s in SILO_NAMES},
+    }).round({s.lower(): 1 for s in SILO_NAMES})
 
 
 def main() -> None:
     df = load_merged()
-    ranked = compute_scores(df)
+    ranked = compute_scores(df)  # position-aware
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     export_cols = [
         "rank", "rank_in_position", "player_name", "team_short", "position_group",
-        "matches", "minutes", "score_overall",
-        "score__Athletic", "score__Passing", "score__Off-ball",
+        "matches", "minutes", "score_overall", *[f"silo__{s}" for s in SILO_NAMES],
     ]
     csv_path = OUT_DIR / "season_leaderboard.csv"
-    ranked[export_cols].to_csv(csv_path, index=False)
-    print(f"Wrote leaderboard for {len(ranked)} players -> {csv_path}\n")
-    print("Top 15 by SkillCorner Score (equal weights):\n")
-    lb = leaderboard(df, 15)
-    print(lb.to_string(index=False))
+    ranked[export_cols].round(1).to_csv(csv_path, index=False)
+    print(f"Wrote leaderboard for {len(ranked)} players -> {csv_path}")
+    print(f"Silos: {SILO_NAMES}")
+    print(f"Not measurable from this data: {list(UNAVAILABLE)}\n")
+    print("Top 15 by SkillCorner Score (position-aware weights):\n")
+    print(leaderboard(df, 15).to_string(index=False))
 
 
 if __name__ == "__main__":

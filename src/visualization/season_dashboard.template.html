@@ -68,7 +68,9 @@
   .chip[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
   .chip:hover{border-color:var(--series-1)}
   select,input[type=search]{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;
-    border:1px solid var(--border);background:var(--surface);color:var(--ink)}
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);max-width:100%}
+  #playerSelect{max-width:min(100%,340px);text-overflow:ellipsis}
+  .toolrow>div{min-width:0;max-width:100%}
   .toolbtn{font:inherit;font-size:13px;padding:5px 12px;border-radius:8px;border:1px solid var(--border);
     background:var(--surface);color:var(--ink-2);cursor:pointer}
   .toolbtn[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
@@ -108,6 +110,19 @@
   .pf-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:2px}
   .pf-head .name{font-size:20px;font-weight:700}
   .pf-head .meta{font-size:13px;color:var(--ink-2)}
+  .pf-faces{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 6px;align-items:stretch}
+  .pf-ovr{display:flex;flex-direction:column;justify-content:center;background:var(--series-1);color:#fff;
+    border-radius:12px;padding:10px 16px;min-width:96px}
+  .pf-ovr .big{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .pf-ovr .lbl{font-size:11px;letter-spacing:.06em;opacity:.85;margin-top:2px}
+  .pf-face{flex:1 1 96px;min-width:96px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:9px 11px}
+  .pf-face .fv{font-size:23px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .pf-face .fl{font-size:10.5px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;font-weight:600}
+  .pf-face .fbar{height:4px;border-radius:2px;background:var(--grid);margin-top:7px;overflow:hidden}
+  .pf-face .fbar i{display:block;height:100%}
+  .pf-na{font-size:11.5px;color:var(--muted);align-self:center;padding-left:2px}
+  .pf-na b{color:var(--ink-2);font-weight:600}
   /* team bars */
   .tbar-row{display:grid;grid-template-columns:140px 1fr 52px;align-items:center;gap:10px;padding:2.5px 0}
   .tbar-lab{font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -137,8 +152,11 @@
   .wctl .top .nm .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
   .wctl .top .pc{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:700}
   .wctl input[type=range]{width:100%;accent-color:var(--series-1)}
-  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
-  .presets .lab{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:2px}
+  .lb-modes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+  .lb-modes .lab{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:2px}
+  .lb-note{font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--muted);border-radius:8px;padding:9px 12px;margin:14px 0 4px}
+  .weights.dim{opacity:.4;pointer-events:none}
   .lb-row{display:grid;grid-template-columns:34px minmax(120px,1.4fr) 1fr 44px;align-items:center;gap:12px;
     padding:6px 8px;border-radius:9px;cursor:pointer;transition:background .12s}
   .lb-row:hover{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
@@ -185,19 +203,26 @@
   <!-- LEADERBOARD -->
   <section id="lb-section">
     <div class="sec-head">
-      <h2>The SkillCorner Score — season leaderboard</h2>
-      <p>One number per player, <strong>0–100</strong>. Every metric is ranked as a percentile
-        <em>within the player's position</em>, rolled into three sub-scores, then combined:
-        <span class="formula">Score = w<sub>A</sub>·Athletic + w<sub>P</sub>·Passing + w<sub>O</sub>·Off-ball</span>.
-        Drag the weights to re-rank the league around what you value.</p>
+      <h2>The SkillCorner Score — a FIFA-style rating</h2>
+      <p>One number per player, <strong>0–100</strong>, built from <strong>five silos</strong> the tracking data can
+        actually see. Each silo is a weighted blend of metrics, each ranked as a percentile
+        <em>within the player's position</em>. The overall combines the silos —
+        <strong>weighted by position</strong> by default (a striker leans on Creation &amp; Movement, a centre-back on
+        Physical &amp; Passing), or set your own weights.</p>
     </div>
     <div class="card">
+      <div class="lb-modes" id="lbModes"></div>
       <div class="weights" id="weights"></div>
-      <div class="presets" id="presets"></div>
       <div class="legend" id="lbLegend"></div>
       <div id="leaderboard"></div>
-      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in all three facets.
-        Percentiles are computed against the full positional pool, so a player's standing never depends on the filter.
+      <div class="lb-note" id="lbNote">
+        <strong>What tracking can't see:</strong> this is broadcast tracking data (movement + on-ball passing),
+        so three FIFA faces are <em>not</em> measurable and are deliberately left out —
+        <b>Shooting</b> (no shots/xG per player), <b>Dribbling</b> (no 1v1 events) and
+        <b>Defending</b> (no tackles/interceptions/duels).
+      </div>
+      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in all five silos.
+        Percentiles use the full positional pool, so a player's standing never depends on the filter.
         Click any row to load that player's profile below.</div>
     </div>
   </section>
@@ -238,11 +263,12 @@
   </section>
 
   <!-- PLAYER PROFILE -->
-  <section>
+  <section id="pf-section">
     <div class="sec-head">
-      <h2>Player profile</h2>
-      <p>Percentile ranks against positional peers across the league. The centre line is the positional
-        median; bars to the right (blue) are above average, to the left (red) below.</p>
+      <h2>Player card &amp; profile</h2>
+      <p>The five silo faces (like a FIFA card) plus the percentile detail behind them. Each bar's centre line is the
+        positional median; right (blue) is above average, left (red) below. The Overall uses the leaderboard's current
+        weighting.</p>
     </div>
     <div class="card">
       <div class="toolrow">
@@ -254,6 +280,7 @@
         <span id="peerCount" style="font-size:12.5px;color:var(--muted)"></span>
       </div>
       <div class="pf-head" id="pfHead"></div>
+      <div class="pf-faces" id="pfFaces"></div>
       <div class="profile-grid" id="profile"></div>
     </div>
   </section>
@@ -480,12 +507,13 @@ document.querySelectorAll('[data-table]').forEach(b=>{
 });
 
 // ---------- PLAYER PROFILE ----------
+// profile detail grouped by the five silos (labels for the key metrics in each)
 const PF_METRICS=[
-  ['Physical',[['top_speed','Peak speed'],['distance','Distance'],['m_per_min','Work rate'],
-    ['sprints','Sprints'],['hi_count','High-intensity'],['high_accel','Explosive accel']]],
-  ['Passing',[['pass_vol','Pass volume'],['pass_pct','Completion %'],['pass_over','Beats xPass'],
-    ['linebreaks','Line breaks'],['dangerous_passes','Dangerous passes']]],
-  ['Off-ball runs',[['runs','Total runs'],['dangerous_runs','Dangerous runs'],['runs_received','Runs received']]],
+  ['Pace',[['top_speed','Peak speed'],['sprints','Sprints'],['expl_sprint','Accel→sprint'],['high_accel','Explosive accel']]],
+  ['Physical',[['distance','Distance'],['m_per_min','Work rate'],['hi_count','High-intensity'],['hsr_dist','High-speed dist'],['high_decel','Decelerations']]],
+  ['Passing',[['pass_over','Beats xPass'],['pass_pct','Completion %'],['pass_vol','Pass volume'],['pass_dist','Pass range']]],
+  ['Creation',[['dangerous_passes','Dangerous passes'],['linebreaks','Line breaks'],['pass_shot','Passes → shots'],['pass_torun','Passes → runs'],['pass_goal','Passes → goals']]],
+  ['Movement',[['dangerous_runs','Dangerous runs'],['runs_received','Runs received'],['run_shot','Runs → shots'],['runs_targeted','Runs targeted'],['runs_box','Runs into box'],['runs','Total runs']]],
 ];
 function pct(arr,v){if(v==null)return null;const vals=arr.filter(x=>x!=null).sort((a,b)=>a-b);
   if(!vals.length)return null;let c=0;for(const x of vals)if(x<=v)c++;return Math.round(100*c/vals.length);}
@@ -497,9 +525,25 @@ function renderProfile(){
   document.getElementById('pfHead').innerHTML=
     `<span class="name">${d.player_name}</span>
      <span class="meta">${d.position_group} · ${d.team_short} · ${d.matches} matches · ${fmt(d.minutes,0)} min/match</span>`;
+  // FIFA-style faces: OVR + five silo scores + unavailable note
+  const faces=document.getElementById('pfFaces');faces.innerHTML='';
+  const ovr=overallScore(d);
+  faces.appendChild(el('div',{class:'pf-ovr'},[
+    el('div',{class:'big',text:ovr==null?'—':Math.round(ovr)}),
+    el('div',{class:'lbl',text:'OVR'})]));
+  SILO_NAMES.forEach(s=>{
+    const v=d['silo__'+s];
+    const bar=el('div',{class:'fbar'});const fill=el('i');
+    fill.style.width=(v==null?0:v)+'%';fill.style.background=SILO_COLORS[s];bar.appendChild(fill);
+    faces.appendChild(el('div',{class:'pf-face'},[
+      el('div',{class:'fv',text:v==null?'—':Math.round(v),style:`color:${SILO_COLORS[s]}`}),
+      el('div',{class:'fl',text:s}),bar]));
+  });
+  faces.appendChild(el('div',{class:'pf-na',html:`not tracked:<br><b>${UNAVAILABLE.join(' · ')}</b>`}));
+  // percentile detail
   const box=document.getElementById('profile');box.innerHTML='';
   PF_METRICS.forEach(([grp,metrics])=>{
-    box.appendChild(el('div',{class:'pf-group',text:grp}));
+    box.appendChild(el('div',{class:'pf-group',html:`<span style="color:${SILO_COLORS[grp]}">■</span> ${grp}`}));
     metrics.forEach(([key,lab])=>{
       const p=pct(peers.map(x=>x[key]),d[key]);
       const row=el('div',{class:'pf-row'});
@@ -588,128 +632,125 @@ function renderRunMix(){
     `<span class="item"><span class="swatch" style="background:${RUN_COLORS[i]}"></span>${f}</span>`).join('');
 }
 
-// ---------- SKILLCORNER SCORE ----------
-const SCORE_GROUPS={
-  'Athletic':['top_speed','m_per_min','distance','hsr_dist','sprints','hi_count','high_accel'],
-  'Passing':['pass_vol','pass_pct','pass_over','linebreaks','dangerous_passes'],
-  'Off-ball':['runs','dangerous_runs','runs_received'],
+// ---------- SKILLCORNER SCORE (5 FIFA-style silos) ----------
+const SILOS={
+  'Pace':{top_speed:3,sprints:2,expl_sprint:1.5,high_accel:1},
+  'Physical':{distance:2,m_per_min:2,hi_count:2,hsr_dist:1,high_decel:1},
+  'Passing':{pass_over:3,pass_pct:2,pass_vol:1,pass_dist:1},
+  'Creation':{dangerous_passes:2,linebreaks:2,pass_shot:2,pass_torun:1,pass_goal:1},
+  'Movement':{dangerous_runs:2,runs_received:2,run_shot:2,runs_targeted:1,runs_box:1,runs:1},
 };
-const SCORE_KEYS=Object.keys(SCORE_GROUPS);
-const SCORE_COLORS={'Athletic':'var(--c1)','Passing':'var(--c2)','Off-ball':'var(--c3)'};
-// precompute percentile of each metric within each player's position group (full pool)
-(function computePercentiles(){
+const SILO_NAMES=Object.keys(SILOS);
+const SILO_COLORS={Pace:'var(--c1)',Physical:'var(--c2)',Passing:'var(--c3)',Creation:'var(--c4)',Movement:'var(--c5)'};
+const POSITION_WEIGHTS={
+  'Central Defender':{Pace:1,Physical:2.5,Passing:2.5,Creation:0.5,Movement:0.5},
+  'Full Back':{Pace:2,Physical:2,Passing:1.5,Creation:1.5,Movement:1.5},
+  'Midfield':{Pace:1,Physical:1.5,Passing:2.5,Creation:2,Movement:1.5},
+  'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5},
+  'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5},
+};
+const UNAVAILABLE=['Shooting','Dribbling','Defending'];
+// precompute percentiles within position for every silo metric, then silo scores
+(function computeScores(){
   const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
-  const allMetrics=[...new Set(Object.values(SCORE_GROUPS).flat())];
-  for(const pos in byPos){
-    const rows=byPos[pos];
-    allMetrics.forEach(m=>{
-      const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
-      rows.forEach(r=>{
-        if(r[m]==null){r['pct__'+m]=null;return;}
-        // average rank percentile (matches pandas rank(pct=True))
+  const metrics=[...new Set(Object.values(SILOS).flatMap(o=>Object.keys(o)))];
+  for(const pos in byPos){const rows=byPos[pos];
+    metrics.forEach(m=>{const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+      rows.forEach(r=>{if(r[m]==null){r['pct__'+m]=null;return;}
         let lo=vals.indexOf(r[m]),hi=vals.lastIndexOf(r[m]);
-        r['pct__'+m]=((lo+hi)/2+1)/vals.length*100;
-      });
-    });
-  }
-  DATA.forEach(d=>{
-    SCORE_KEYS.forEach(g=>{
-      const ps=SCORE_GROUPS[g].map(m=>d['pct__'+m]).filter(v=>v!=null);
-      d['sub__'+g]=ps.length?ps.reduce((a,b)=>a+b,0)/ps.length:null;
-    });
-  });
+        r['pct__'+m]=((lo+hi)/2+1)/vals.length*100;});});}
+  DATA.forEach(d=>{SILO_NAMES.forEach(s=>{let num=0,den=0;
+    for(const m in SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=SILOS[s][m]*p;den+=SILOS[s][m];}}
+    d['silo__'+s]=den>0?num/den:null;});});
 })();
-const weightState={'Athletic':1,'Passing':1,'Off-ball':1};
-function overallScore(d,w){
-  let num=0,den=0;
-  SCORE_KEYS.forEach(g=>{const s=d['sub__'+g];if(s!=null){num+=w[g]*s;den+=w[g];}});
-  return den>0?num/den:null;
-}
-const LB_PRESETS={
-  'Balanced':{Athletic:1,Passing:1,'Off-ball':1},
-  'Athlete':{Athletic:3,Passing:1,'Off-ball':1},
-  'Playmaker':{Athletic:1,Passing:3,'Off-ball':1},
-  'Runner':{Athletic:1,Passing:1,'Off-ball':3},
-  'Creator':{Athletic:1,Passing:2,'Off-ball':2},
+let scoreMode='role';                       // 'role' (position-aware) or 'custom'
+const customW={};SILO_NAMES.forEach(s=>customW[s]=1);
+function balanced(){const o={};SILO_NAMES.forEach(s=>o[s]=1);return o;}
+function siloWeights(d){return scoreMode==='role'?(POSITION_WEIGHTS[d.position_group]||balanced()):customW;}
+function overallScore(d){const w=siloWeights(d);let num=0,den=0;
+  SILO_NAMES.forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
+function siloContribs(d){const w=siloWeights(d);const present=SILO_NAMES.filter(s=>d['silo__'+s]!=null);
+  const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*d['silo__'+s]);return o;}
+const LB_MODES={
+  'By position':null,
+  'Balanced':{Pace:1,Physical:1,Passing:1,Creation:1,Movement:1},
+  'Athlete':{Pace:3,Physical:3,Passing:1,Creation:1,Movement:1},
+  'Creator':{Pace:1,Physical:1,Passing:2,Creation:3,Movement:2},
+  'Engine':{Pace:2,Physical:3,Passing:1,Creation:1,Movement:2},
+  'Poacher':{Pace:2,Physical:1,Passing:0.5,Creation:2,Movement:3},
 };
 let lbLimit=15;
-function normW(){const s=SCORE_KEYS.reduce((a,g)=>a+weightState[g],0)||1;
-  const o={};SCORE_KEYS.forEach(g=>o[g]=weightState[g]/s);return o;}
 function renderLeaderboard(){
-  const w=normW();
   const elig=DATA.filter(d=>state.positions.has(d.position_group)&&d.matches>=state.minMatches
-    &&SCORE_KEYS.every(g=>d['sub__'+g]!=null));
-  elig.forEach(d=>d._score=overallScore(d,w));
+    &&SILO_NAMES.every(s=>d['silo__'+s]!=null));
+  elig.forEach(d=>d._score=overallScore(d));
   elig.sort((a,b)=>b._score-a._score);
   const box=document.getElementById('leaderboard');box.innerHTML='';
-  const head=el('div',{class:'lb-row head'},[
+  box.appendChild(el('div',{class:'lb-row head'},[
     el('div',{class:'lb-rank',text:'#'}),el('div',{text:'Player'}),
-    el('div',{text:'Athletic · Passing · Off-ball'}),el('div',{class:'lb-score',text:'Score'})]);
-  box.appendChild(head);
-  const show=elig.slice(0,lbLimit);
-  const maxS=show.length?show[0]._score:100;
+    el('div',{text:SILO_NAMES.join(' · ')}),el('div',{class:'lb-score',text:'OVR'})]));
+  const show=elig.slice(0,lbLimit);const maxS=show.length?show[0]._score:100;
   show.forEach((d,i)=>{
     const row=el('div',{class:'lb-row'});
     row.appendChild(el('div',{class:'lb-rank',text:(i+1)}));
     row.appendChild(el('div',{class:'lb-name'},[
       el('div',{class:'n',text:d.player_short_name}),
       el('div',{class:'m',text:`${d.position_group} · ${d.team_short} · ${d.matches} matches`})]));
-    // stacked contribution bar (weighted parts sum to score); scaled to leader
-    const bar=el('div',{class:'lb-bar'});
-    SCORE_KEYS.forEach(g=>{
-      const part=w[g]*d['sub__'+g];
-      const seg=el('div',{class:'lb-seg'});
-      seg.style.width=(part/maxS*100)+'%';seg.style.background=SCORE_COLORS[g];
-      seg.title=`${g}: ${fmt(d['sub__'+g],0)}`;
+    const bar=el('div',{class:'lb-bar'});const c=siloContribs(d);
+    SILO_NAMES.forEach(s=>{const part=c[s]||0;if(part<=0)return;
+      const seg=el('div',{class:'lb-seg'});seg.style.width=(part/maxS*100)+'%';seg.style.background=SILO_COLORS[s];
       seg.addEventListener('mouseenter',ev=>showTip(
-        `<b>${d.player_short_name}</b><div class="pos">${g} percentile</div>
-         <div class="row"><span>Sub-score</span><b>${fmt(d['sub__'+g],0)}</b></div>
-         <div class="row"><span>Weight</span><b>${Math.round(w[g]*100)}%</b></div>`,ev));
-      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);
-      bar.appendChild(seg);
-    });
+        `<b>${d.player_short_name}</b><div class="pos">${s} silo</div>
+         <div class="row"><span>Silo score</span><b>${fmt(d['silo__'+s],0)}</b></div>
+         <div class="row"><span>Contribution</span><b>${fmt(c[s],1)}</b></div>`,ev));
+      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);bar.appendChild(seg);});
     row.appendChild(bar);
     row.appendChild(el('div',{class:'lb-score',text:fmt(d._score,1)}));
-    row.onclick=()=>{const sel=document.getElementById('playerSelect');sel.value=d.player_id;
-      renderProfile();document.getElementById('profile').scrollIntoView({behavior:'smooth',block:'center'});};
+    row.onclick=()=>{document.getElementById('playerSelect').value=d.player_id;renderProfile();
+      document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});};
     box.appendChild(row);
   });
   const more=el('div',{class:'lb-more'});
-  if(lbLimit<elig.length){const b=el('button',{class:'toolbtn',text:`Show more (${elig.length-lbLimit} more)`});
+  if(lbLimit<elig.length){const b=el('button',{class:'toolbtn',text:`Show more (${elig.length-lbLimit})`});
     b.onclick=()=>{lbLimit+=15;renderLeaderboard();};more.appendChild(b);}
   if(lbLimit>15){const b=el('button',{class:'toolbtn',text:'Show less',style:'margin-left:8px'});
     b.onclick=()=>{lbLimit=15;renderLeaderboard();};more.appendChild(b);}
   box.appendChild(more);
-  // reflect weights in slider labels
-  SCORE_KEYS.forEach(g=>{const pc=document.getElementById('wpc-'+g);if(pc)pc.textContent=Math.round(w[g]*100)+'%';});
+  const sumW=SILO_NAMES.reduce((a,s)=>a+customW[s],0)||1;
+  SILO_NAMES.forEach(s=>{const pc=document.getElementById('wpc-'+s);if(pc)pc.textContent=Math.round(customW[s]/sumW*100)+'%';});
 }
-(function buildWeightUI(){
+(function buildScoreUI(){
+  const modes=document.getElementById('lbModes');
+  modes.appendChild(el('span',{class:'lab',text:'Weighting'}));
+  Object.keys(LB_MODES).forEach(name=>{
+    const c=el('button',{class:'chip',text:name,'aria-pressed':name==='By position'});
+    c.onclick=()=>{
+      [...modes.querySelectorAll('.chip')].forEach(x=>x.setAttribute('aria-pressed',x===c));
+      if(LB_MODES[name]===null){scoreMode='role';}
+      else{scoreMode='custom';SILO_NAMES.forEach(s=>{customW[s]=LB_MODES[name][s];
+        document.getElementById('w-'+s).value=LB_MODES[name][s]*20;});}
+      document.getElementById('weights').classList.toggle('dim',scoreMode==='role');
+      renderLeaderboard();
+    };
+    modes.appendChild(c);
+  });
   const box=document.getElementById('weights');
-  SCORE_KEYS.forEach(g=>{
+  SILO_NAMES.forEach(s=>{
     const ctl=el('div',{class:'wctl'});
     ctl.appendChild(el('div',{class:'top'},[
-      el('span',{class:'nm',html:`<span class="dot" style="background:${SCORE_COLORS[g]}"></span>${g}`}),
-      el('span',{class:'pc',id:'wpc-'+g})]));
-    const r=el('input',{type:'range',min:'0',max:'100',value:'50',step:'5',id:'w-'+g});
-    r.oninput=()=>{weightState[g]=+r.value;markPreset(null);renderLeaderboard();};
+      el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}`}),
+      el('span',{class:'pc',id:'wpc-'+s})]));
+    const r=el('input',{type:'range',min:'0',max:'100',value:'20',step:'5',id:'w-'+s});
+    r.oninput=()=>{customW[s]=(+r.value/20)||0.0001;scoreMode='custom';
+      [...document.querySelectorAll('#lbModes .chip')].forEach(x=>x.setAttribute('aria-pressed',false));
+      document.getElementById('weights').classList.remove('dim');renderLeaderboard();};
     ctl.appendChild(r);box.appendChild(ctl);
   });
-  const pbox=document.getElementById('presets');
-  pbox.appendChild(el('span',{class:'lab',text:'Presets'}));
-  Object.keys(LB_PRESETS).forEach(name=>{
-    const c=el('button',{class:'chip',text:name,'aria-pressed':name==='Balanced'});
-    c.onclick=()=>{const p=LB_PRESETS[name];SCORE_KEYS.forEach(g=>{weightState[g]=p[g]*25;
-      document.getElementById('w-'+g).value=p[g]*25;});markPreset(name);renderLeaderboard();};
-    pbox.appendChild(c);
-  });
-  document.getElementById('lbLegend').innerHTML=SCORE_KEYS.map(g=>
-    `<span class="item"><span class="swatch" style="background:${SCORE_COLORS[g]}"></span>${g}</span>`).join('')
-    +`<span class="item" style="color:var(--muted)">segment length = weighted contribution</span>`;
-  // init sliders to balanced
-  SCORE_KEYS.forEach(g=>{weightState[g]=25;document.getElementById('w-'+g).value=25;});
+  box.classList.add('dim');  // start in role-based mode
+  document.getElementById('lbLegend').innerHTML=SILO_NAMES.map(s=>
+    `<span class="item"><span class="swatch" style="background:${SILO_COLORS[s]}"></span>${s}</span>`).join('')
+    +`<span class="item" style="color:var(--muted)">bar = position-weighted contribution</span>`;
 })();
-function markPreset(name){document.querySelectorAll('#presets .chip').forEach(c=>
-  c.setAttribute('aria-pressed',c.textContent===name));}
 
 // ---------- render all ----------
 function renderAll(){renderLeaderboard();renderAthletic();renderPassing();renderRunMix();}

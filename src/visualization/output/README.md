@@ -18,36 +18,54 @@ There are two deliverables:
 
 ---
 
-## 🏅 The SkillCorner Score — a leaderboard coefficient
+## 🏅 The SkillCorner Score — a FIFA-style rating
 
-A single **0–100** rating per player so you can rank the league. It is deliberately
-transparent:
+A single **0–100** rating per player so you can rank the league, built like a FIFA
+card but **only from the faces broadcast tracking data can actually see**.
 
-1. Each metric becomes a **percentile within the player's position group** (a defender
-   is only ever compared to defenders).
-2. Those percentiles roll up into three **sub-scores** — Athletic, Passing, Off-ball —
-   each the mean of its metrics' percentiles.
-3. The **Overall Score** is a weighted average of the three:
+**What the data supports (five silos):**
 
-   > **Score = wₐ · Athletic + wₚ · Passing + wₒ · Off-ball**
+| Silo | ~ FIFA face | Built from |
+|---|---|---|
+| **Pace** | PAC | peak sprint speed (PSV99), sprint volume, explosive accelerations |
+| **Physical** | PHY | distance, work rate, high-intensity volume, high-speed running, braking |
+| **Passing** | PAS | beating xPass, completion %, volume, range |
+| **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
+| **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
 
-   with the weights renormalised over whichever facets a player has data for.
+**What tracking can't see — and we don't fake:** **Shooting** (no shots/xG per
+player), **Dribbling** (no 1v1 events), **Defending** (no tackles/interceptions/duels).
+This is in-possession + physical data only.
 
-In the dashboard the three weights are **live sliders** (plus presets — *Balanced,
-Athlete, Playmaker, Runner, Creator*), so you can re-rank the league around what you
-value. Only players with **3+ matches** and data in all three facets are ranked.
-The full ranking is also exported to
-[`season_leaderboard.csv`](season_leaderboard.csv).
+**Method:**
+1. Each metric → **percentile within the player's position group**.
+2. Each silo = a **weighted blend** of its metrics' percentiles (weights in
+   `SILOS` — e.g. beating xPass counts 3×, raw volume 1×).
+3. Overall = weighted mean of the five silos, **weighted by position** by default
+   (`POSITION_WEIGHTS` — a centre-back leans on Physical/Passing, a forward on
+   Creation/Movement) or with one custom weight set:
+
+   > **Score = Σ wₛ · Siloₛ**   (weights renormalise over the silos a player has)
+
+In the dashboard, choose **By position** (role-based) or drag five weight sliders
+(presets: *Balanced, Athlete, Creator, Engine, Poacher*). Each player also gets a
+**FIFA-style card** — five faces + OVR, with the three unmeasurable faces greyed out.
+Only players with **3+ matches** and data in all five silos are ranked; the full
+table is exported to [`season_leaderboard.csv`](season_leaderboard.csv).
 
 ![Season leaderboard](../../../assets/viz/leaderboard.png)
+
+![Player card](../../../assets/viz/player_card.png)
 
 ```python
 from src.visualization.build_dashboard_data import load_merged
 from src.visualization.player_score import compute_scores, leaderboard
 
 df = load_merged()
-compute_scores(df, weights={"Athletic": 1, "Passing": 2, "Off-ball": 2})  # tilt to creators
-print(leaderboard(df, 20))                                                # tidy top-20
+compute_scores(df)                                       # position-aware weights
+compute_scores(df, silo_weights={"Movement": 3, "Creation": 2, "Pace": 2,
+                                 "Physical": 1, "Passing": 1})   # a custom "poacher" lens
+print(leaderboard(df, 20))                               # tidy top-20 with the five faces
 ```
 
 ---
@@ -69,7 +87,7 @@ SkillCorner's **xPass** model.
 
 ## Player profile — percentile ranks vs peers
 
-For any player, percentile ranks across 14 physical, passing and off-ball metrics,
+For any player, percentile ranks across the metrics behind the five silos,
 measured against every other player in their position. Bars right of centre (blue)
 are above the positional median; left (red) below.
 

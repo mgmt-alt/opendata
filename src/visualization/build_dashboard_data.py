@@ -82,6 +82,8 @@ PHYS_COLS = {
     "sprint_count_full_all": "sprints",            # sprint efforts
     "hi_count_full_all": "hi_count",               # high-intensity efforts
     "highaccel_count_full_all": "high_accel",      # explosive accelerations
+    "highdecel_count_full_all": "high_decel",      # hard decelerations (braking)
+    "explacceltosprint_count_full_all": "expl_sprint",  # explosive accel into a sprint
 }
 
 PASS_COLS = {
@@ -91,12 +93,18 @@ PASS_COLS = {
     "pass_count_linebreak_completed_p30tip": "linebreaks",
     "pass_count_dangerous_completed_p30tip": "dangerous_passes",
     "pass_avgdistance": "pass_dist",
+    "pass_count_torun_completed_p30tip": "pass_torun",     # completed passes into a run
+    "pass_count_shotwithin10s_p30tip": "pass_shot",        # passes leading to a shot <=10s
+    "pass_count_goalwithin10s_p30tip": "pass_goal",        # passes leading to a goal <=10s
 }
 
 OBR_COLS = {
     "offballrun_count_p30tip": "runs",
     "offballrun_count_dangerous_p30tip": "dangerous_runs",
     "offballrun_count_received_p30tip": "runs_received",
+    "offballrun_count_targeted_p30tip": "runs_targeted",   # runs a teammate aimed a pass at
+    "offballrun_count_shotwithin10s_p30tip": "run_shot",   # runs leading to a shot <=10s
+    "offballrun_count_penaltyarea_p30tip": "runs_box",     # runs into the penalty area
 }
 
 # 11 SkillCorner run subtypes grouped into 6 readable families for the run-mix chart.
