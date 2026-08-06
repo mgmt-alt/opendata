@@ -825,7 +825,7 @@ function teamEntities(){
     const e={player_id:'team:'+team,player_short_name:team,player_name:team,team_short:team,
       position_group:'Team',isTeam:true,players:ps.length,matches:99};
     TEAM_RATE.forEach(f=>e[f]=wmean(f));
-    ALL_NAMES.forEach(s=>e['silo__'+s]=wmean('silo__'+s));
+    ALL_NAMES.forEach(s=>{e['silo__'+s]=wmean('silo__'+s);e['siloL__'+s]=wmean('siloL__'+s);});
     e._overall=wmean_pos(ps,w);   // minutes-weighted mean of players' position-weighted overalls
     const sp=ps.filter(p=>p.shot);
     if(sp.length){const sum=f=>sp.reduce((a,p)=>a+(p.shot[f]||0),0);
@@ -925,33 +925,40 @@ const POSITION_WEIGHTS={
   'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5,Shooting:2,Defending:0.8,Dribbling:2.5},
   'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5,Shooting:3,Defending:0.5,Dribbling:1.5},
 };
-// build the composite sample TOTALS on each player (null when not in the sample)
+// build the composite sample scores on each player (null when not in the sample).
+// Shooting/Dribbling are VOLUME TOTALS (sparse events — volume matters, a cameo rate can't
+// top them, zero output sits at the floor). Defending is a PER-APPEARANCE rate of
+// ball-winning + danger-prevention (dense events, so per-app is stable) — this reflects
+// stopping play rather than pressing volume, and removes the games-played bias.
 DATA.forEach(d=>{const sh=d.shot;
   d.shotval_total = sh?sh.shots + 3*sh.goals:null;
-  d.defval_total  = sh?2*sh.regains + sh.disruptions + 0.5*sh.pressures:null;
+  d.defval_total  = sh?(2*sh.regains + 2*(sh.danger_prevented||0) + sh.disruptions)/(sh.apps||1):null;
   d.dribval_total = sh?sh.takeons:null;   // 1v1 take-ons (defenders beaten), not raw carries
 });
 // Weibull percentile rank/(n+1): the sample's best sits just under 100 (not exactly 100),
 // the worst just above 0 — a value is never claimed better than 100% of a wider population.
 function pctIn(vals,v){if(v==null||!vals.length)return null;
   let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);return ((lo+hi)/2+1)/(vals.length+1)*100;}
-// precompute percentiles: sample composites LEAGUE-WIDE, all else within position
+// Precompute TWO consistent bases for every silo, so a leaderboard mix is never a mash-up
+// of different scales:
+//   silo__X  = WITHIN-position percentiles  → "how good for your role" (By position mode)
+//   siloL__X = LEAGUE-WIDE percentiles       → "best in absolute terms" (custom weights/archetypes)
 (function computeScores(){
   const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
   const metrics=[...new Set(Object.values(ALL_SILOS).flatMap(o=>Object.keys(o)))];
   metrics.forEach(m=>{
-    if(LEAGUE_METRICS.has(m)){
-      const vals=DATA.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
-      DATA.forEach(r=>{r['pct__'+m]=pctIn(vals,r[m]);});
-    }else{
-      for(const pos in byPos){const rows=byPos[pos];
-        const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
-        rows.forEach(r=>{r['pct__'+m]=pctIn(vals,r[m]);});}
-    }
+    const vals=DATA.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);       // league-wide
+    DATA.forEach(r=>{r['pctL__'+m]=pctIn(vals,r[m]);});
+    for(const pos in byPos){const rows=byPos[pos];                          // within position
+      const pv=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+      rows.forEach(r=>{r['pctW__'+m]=pctIn(pv,r[m]);});}
   });
-  DATA.forEach(d=>{ALL_NAMES.forEach(s=>{let num=0,den=0;
-    for(const m in ALL_SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}
-    d['silo__'+s]=den>0?num/den:null;});});
+  const blend=(d,s,pre)=>{let num=0,den=0;for(const m in ALL_SILOS[s]){const p=d[pre+m];
+    if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}return den>0?num/den:null;};
+  DATA.forEach(d=>{ALL_NAMES.forEach(s=>{
+    d['silo__'+s]=blend(d,s,'pctW__');   // within-position (role-fit)
+    d['siloL__'+s]=blend(d,s,'pctL__');  // league-wide (absolute)
+  });});
 })();
 // ----- generic metric access (registry-driven) for drill-down + scatter explorer -----
 // Season metrics live on the player record; sample metrics live under d.shot.
@@ -985,12 +992,15 @@ const customW={};ALL_NAMES.forEach(s=>customW[s]=1);
 function activeNames(){return includeSample?ALL_NAMES:SEASON_NAMES;}
 function balanced(){const o={};ALL_NAMES.forEach(s=>o[s]=1);return o;}
 function siloWeights(d){return scoreMode==='role'?(POSITION_WEIGHTS[d.position_group]||balanced()):customW;}
+// basis follows the mode: role → within-position (silo__), custom → league-wide (siloL__)
+function siloBasis(){return scoreMode==='role'?'silo__':'siloL__';}
+function siloVal(d,s){return d[siloBasis()+s];}
 function overallScore(d){
   if(d.isTeam&&scoreMode==='role')return d._overall;   // teams have no position → use squad avg overall
   const w=siloWeights(d);let num=0,den=0;
-  activeNames().forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
-function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>d['silo__'+s]!=null);
-  const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*d['silo__'+s]);return o;}
+  activeNames().forEach(s=>{const v=siloVal(d,s);if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
+function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>siloVal(d,s)!=null);
+  const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*siloVal(d,s));return o;}
 // canonical OVR for the player card: always the POSITION-weighted total over all silos,
 // independent of whatever weighting/preset the leaderboard is currently set to.
 function positionOverall(d){const w=POSITION_WEIGHTS[d.position_group]||balanced();let num=0,den=0;
@@ -1028,8 +1038,8 @@ function renderLeaderboard(){
     names.forEach(s=>{const part=c[s]||0;if(part<=0)return;
       const seg=el('div',{class:'lb-seg'});seg.style.width=(part/maxS*100)+'%';seg.style.background=SILO_COLORS[s];
       seg.addEventListener('mouseenter',ev=>showTip(
-        `<b>${d.player_short_name}</b><div class="pos">${s} silo${SAMPLE_NAMES.includes(s)?' · 10-match':''}</div>
-         <div class="row"><span>Silo score</span><b>${fmt(d['silo__'+s],0)}</b></div>
+        `<b>${d.player_short_name}</b><div class="pos">${s} silo${SAMPLE_NAMES.includes(s)?' · 10-match':''} · ${scoreMode==='role'?'vs position':'league-wide'}</div>
+         <div class="row"><span>Silo score</span><b>${fmt(siloVal(d,s),0)}</b></div>
          <div class="row"><span>Contribution</span><b>${fmt(c[s],1)}</b></div>`,ev));
       seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);bar.appendChild(seg);});
     row.appendChild(bar);
@@ -1045,9 +1055,12 @@ function renderLeaderboard(){
     b.onclick=()=>{lbLimit=15;renderLeaderboard();};more.appendChild(b);}
   box.appendChild(more);
   const en=document.getElementById('lbElig');
-  if(en)en.textContent=team
-    ?`Ranking ${elig.length} teams (squad averages; sample silos from the tracked games).`
-    :`Ranking ${elig.length} players in the 10-match sample (all 8 silos present).`;
+  const basisNote=scoreMode==='role'
+    ? 'Silos are percentiled within each position (role-fit), combined by position weights.'
+    : 'Silos are percentiled league-wide (absolute), so your custom mix compares every player on the same scale.';
+  if(en)en.textContent=(team
+    ?`Ranking ${elig.length} teams (squad averages; sample silos from the tracked games). `
+    :`Ranking ${elig.length} players in the 10-match sample (all 8 silos present). `)+basisNote;
   const sumW=names.reduce((a,s)=>a+customW[s],0)||1;
   names.forEach(s=>{const pc=document.getElementById('wpc-'+s);if(pc)pc.textContent=Math.round(customW[s]/sumW*100)+'%';});
 }

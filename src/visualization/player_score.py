@@ -123,6 +123,7 @@ def compute_scores(
     min_matches: int = 3,
     include_sample: bool = False,
     eligible_only: bool = True,
+    absolute: bool | None = None,
 ) -> pd.DataFrame:
     """Ranked leaderboard with per-metric percentiles, silo scores and an Overall.
 
@@ -130,6 +131,10 @@ def compute_scores(
     ``include_sample`` True  -> 8 silos (adds Shooting/Defending/Dribbling from the
     10-match sample); only players with all eight silos are ranked.
     """
+    # By default the basis follows the mode: custom weights → league-wide (absolute),
+    # position-aware → within-position (role-fit). Override with ``absolute=`` explicitly.
+    if absolute is None:
+        absolute = silo_weights is not None
     out = df.copy()
     silos = ALL_SILOS if include_sample else SEASON_SILOS
     names = list(silos)
@@ -137,23 +142,26 @@ def compute_scores(
     if include_sample:
         sample = load_sample()
         raw = ["shots", "goals", "regains", "pressures", "disruptions", "carries",
-               "progcarries", "takeons"]
+               "progcarries", "takeons", "danger_prevented", "apps"]
         out = out.merge(sample[raw], left_on="player_id", right_index=True, how="left")
-        # composite sample TOTALS (volume over the tracked matches). Goal weight 3 keeps
-        # goals worth more than a blank shot while letting shot VOLUME drive the rating,
-        # so a 2-shot cameo can't rate as an elite shooter.
+        # Shooting/Dribbling = VOLUME TOTALS over the tracked matches (sparse events — volume
+        # matters, a 2-shot cameo can't rate elite, zero output sits at the floor).
         out["shotval_total"] = out["shots"] + 3 * out["goals"]
-        out["defval_total"] = 2 * out["regains"] + out["disruptions"] + 0.5 * out["pressures"]
-        # Dribbling = 1v1 take-ons (defenders beaten by the dribble), NOT raw ball carries
-        # — carries flatter centre-backs/full-backs who progress in build-up without beating
-        # anyone. Players who never beat a defender all tie at the bottom, as they should.
         out["dribval_total"] = out["takeons"].astype(float)
+        # Defending = a PER-APPEARANCE rate of ball-winning + danger-prevention (dense events,
+        # so per-app is stable and removes the games-played bias). This reflects stopping play
+        # rather than raw pressing volume, so ball-winning midfielders/full-backs lead it —
+        # not high-pressing forwards, as the old "2·regains + disruptions + 0.5·pressures" total did.
+        out["defval_total"] = (2 * out["regains"] + 2 * out["danger_prevented"]
+                               + out["disruptions"]) / out["apps"].clip(lower=1)
 
-    # 1) per-metric percentiles — sample composites league-wide, everything else within
-    #    position (sample metrics auto-restrict to the sample pool since rank skips NaN)
+    # 1) per-metric percentiles. Two consistent bases (never a mash-up):
+    #    absolute=False -> WITHIN position (role-fit, the default / position-aware overall)
+    #    absolute=True  -> LEAGUE-WIDE (used with custom silo_weights so a cross-position mix
+    #                      is on one scale). Applied to ALL silos, season and sample alike.
     for metrics in silos.values():
         for col in metrics:
-            if col in LEAGUE_METRICS:
+            if absolute:
                 out[f"pct__{col}"] = _percentile_league(out[col])
             else:
                 out[f"pct__{col}"] = _percentile_within(out, col, group_col)

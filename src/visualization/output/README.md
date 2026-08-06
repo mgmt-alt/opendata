@@ -32,22 +32,51 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Passing** | PAS | beating xPass, completion %, volume, range |
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
-| **Shooting** † | SHO | **shot value** = `shots + 3·goals` (sample totals) |
-| **Defending** † | DEF | `2·regains + disruptions + 0.5·pressures` (sample totals) |
-| **Dribbling** † | DRI | 1v1 **take-ons** — defenders beaten by the dribble (sample totals) |
+| **Shooting** † | SHO | **shot value** = `shots + 3·goals` (sample volume total) |
+| **Defending** † | DEF | `(2·regains + 2·danger-prevented + disruptions) ÷ appearances` |
+| **Dribbling** † | DRI | 1v1 **take-ons** — defenders beaten by the dribble (sample total) |
 
-† 10-match sample only (~155 players). Unlike the season silos, the three sample silos
-are **volume totals** ranked **league-wide** (not per-appearance rates, and not
-within-position). This is deliberate — see below.
+† 10-match sample only (~155 players). **Shooting and Dribbling are volume totals** (those
+events are sparse — volume should count, and a one-game cameo shouldn't top them).
+**Defending is a per-appearance rate** of ball-winning and danger-prevention: those events
+are dense, so per-appearance is stable, and it (a) reflects *stopping play* rather than raw
+pressing volume and (b) removes the games-played bias that a total carries. See *How the
+weighting works* below.
 
-**All eight silos, always.** The first five come from the *all-games* aggregates
-(percentiled within position); the three sample silos come from the per-match **dynamic
-events** in the 10 tracked matches (volume totals, percentiled league-wide). They are all
-factored into every ranking — there is no toggle — so the leaderboard covers the **155
+**All eight silos, always.** The first five come from the *all-games* aggregates; the three
+sample silos come from the per-match **dynamic events** in the 10 tracked matches. They are
+all factored into every ranking — there is no toggle — so the leaderboard covers the **155
 players** who feature in the tracked matches. (A separate 5-silo, all-220-player export
 lives in `season_leaderboard.csv` for reference.) There is **no per-shot xG** in the data
 (the events carry an expected-*shot* value, but only on defensive engagements, not on the
 shots themselves), so Shooting is still built from volume and goals.
+
+### How the weighting works (and why a Defending-heavy mix now surfaces defenders)
+
+Every silo is turned into a **0–100 percentile**, but *what you're compared against* depends
+on the mode — and the two are never mixed:
+
+- **By position (role-fit).** Every silo — season *and* sample — is percentiled **within
+  your position group**, then combined by position weights. This answers *"how good is this
+  player for their role?"* A centre-back's Defending is judged against other centre-backs.
+- **Custom weights / archetype presets (absolute).** Every silo is percentiled
+  **league-wide**, so a cross-position mix compares all players on **one scale**. This
+  answers *"who is best in absolute terms on this skill blend?"*
+
+This split fixes a real flaw in the earlier build, where the five season silos were
+percentiled within position (so every position averaged ~50 and they carried almost no
+cross-position signal) while the sample silos were league-wide — so any custom mix was
+secretly dominated by the sample silos. Now a custom mix is coherent.
+
+The **Defending** rebuild matters here too. The old `2·regains + disruptions + 0.5·pressures`
+*total* was dominated by on-ball pressing, which happens high up the pitch — so pressing
+forwards looked like the best defenders (they average ~47 pressures a game to a centre-back's
+~15) and it partly just counted how many tracked games you played. The new formula rewards
+**winning the ball and preventing danger, per appearance**, so ball-winning **midfielders and
+full-backs** top Defending — and a Defending-heavy custom mix surfaces them, as you'd expect.
+(Deep centre-backs are still under-credited: SkillCorner's possession-event model captures
+pressing and ball-recovery, not the positioning, interceptions and aerials that define
+centre-back defending — a genuine limitation of the open data.)
 
 **Percentiles use the Weibull plotting position** `rank / (n + 1)`, so the best player in
 a sample sits just under 100 (≈ 99) rather than exactly 100 — a sample's top isn't claimed
@@ -119,16 +148,16 @@ data (`xshot` is populated only on defensive engagements, not on shot events).
   3 shots) — tunable in one place each.
 - **Known limits of the source data:** ~97% tracking-ID accuracy (per the repo README),
   no per-shot xG or shots-on-target, and the 10-match silos are a small sample (1–4 appearances per
-  player), so treat those three as directional. Teams appearing in more of the 10 matches
-  (e.g. Auckland) accumulate more sample events, which can lift their sample silos.
+  player), so treat those three as directional. (Shooting/Dribbling are volume totals, so a
+  club featured in more of the tracked matches accumulates more; Defending is per-appearance,
+  so it no longer carries that games-played bias.)
 
-**Why the sample silos are volume totals, ranked league-wide.** Two failure modes to avoid:
-1. *Per-appearance rates* explode on tiny samples — a player with 4 shots in one tracked
-   game looks like a 4-shots-per-game monster. Using **totals over the sample** means a
-   player who "hasn't had many shots" simply has a low total.
-2. *Within-position* percentiles inflate specialists in the wrong position — a midfielder
-   who barely shoots would be graded only against other midfielders and look elite. Ranking
-   the sample silos **league-wide** judges shooting against everyone.
+**Why Shooting & Dribbling are volume totals (but Defending is a rate).** Shots and take-ons
+are *sparse* — a player with 4 shots in one tracked game would look like a 4-per-game monster
+as a rate, so those two stay **totals**: a player who "hasn't had many shots" simply has a low
+total, and zero output sits at the floor. Defensive engagements are *dense* (dozens per game),
+so a **per-appearance rate** is stable there and, crucially, strips out the games-played bias
+that would otherwise reward whoever featured in the most tracked matches.
 
 **Shooting is one composite, not an average of separate shot/goal percentiles** (which
 would let a high-volume non-scorer out-rank a scorer). It is `shots + 3·goals`: shot
@@ -143,15 +172,17 @@ dribble** (`beaten_by_possession` engagements credited to the ball-carrier). Res
 centre-backs sit at the bottom (mean ≈ 35), and wingers, attacking full-backs and forwards
 who actually take players on lead. Players who never beat a defender tie at the floor.
 
-**Archetype presets are single-silo**, so each reflects exactly that skill's ranking:
-*Poacher* = Shooting, *Ball-winner* = Defending, *Dribbler* = Dribbling, *Playmaker* =
-Passing + Creation, *Athlete* = Pace + Physical. A complete all-rounder can top the
-position-weighted **overall**, but can't top an archetype on unrelated strengths — e.g.
-Cáceres (2 shots in the sample) is nowhere near the Poacher list, while genuine volume
-shooters lead it.
+**Archetype presets are single-silo**, so each reflects exactly that skill's *absolute*
+(league-wide) ranking: *Poacher* = Shooting, *Ball-winner* = Defending, *Dribbler* =
+Dribbling, *Playmaker* = Passing + Creation, *Athlete* = Pace + Physical. A complete
+all-rounder can top the position-weighted **overall**, but can't top an archetype on
+unrelated strengths — e.g. Cáceres (2 shots in the sample) is nowhere near the Poacher list,
+while genuine volume shooters lead it; and Ball-winner now surfaces defensive midfielders and
+full-backs, not high-pressing forwards.
 
-Position weights extend to all eight silos (e.g. a centre-back's Defending is heavily
-weighted, a forward's Shooting). Both rankings export to
+In the position-aware **By position** mode, position weights extend to all eight silos (e.g.
+a centre-back's Defending is heavily weighted, a forward's Shooting) and every silo is
+percentiled within position. Both rankings export to
 [`season_leaderboard.csv`](season_leaderboard.csv) (5 silos) and
 [`sample_leaderboard.csv`](sample_leaderboard.csv) (8 silos).
 
@@ -162,20 +193,22 @@ Compare any two players across the silo axes with the **radar**:
 ![Radar comparison](../../../assets/viz/radar_compare.png)
 
 **Method:**
-1. Each metric → **percentile within the player's position group**.
+1. Each metric → **percentile**. The peer set follows the mode: **within position** for the
+   *By position* view, **league-wide** for custom weights / archetypes (see *How the weighting
+   works* above).
 2. Each silo = a **weighted blend** of its metrics' percentiles (weights in
    `SILOS` — e.g. beating xPass counts 3×, raw volume 1×).
-3. Overall = weighted mean of the five silos, **weighted by position** by default
-   (`POSITION_WEIGHTS` — a centre-back leans on Physical/Passing, a forward on
-   Creation/Movement) or with one custom weight set:
+3. Overall = weighted mean of the silos, **weighted by position** by default
+   (`POSITION_WEIGHTS` — a centre-back leans on Physical/Passing/Defending, a forward on
+   Shooting/Creation/Movement) or with one custom weight set:
 
    > **Score = Σ wₛ · Siloₛ**   (weights renormalise over the silos a player has)
 
-In the dashboard, choose **By position** (role-based) or drag five weight sliders
-(presets: *Balanced, Athlete, Creator, Engine, Poacher*). Each player also gets a
-**FIFA-style card** — five faces + OVR, with the three unmeasurable faces greyed out.
-Only players with **3+ matches** and data in all five silos are ranked; the full
-table is exported to [`season_leaderboard.csv`](season_leaderboard.csv).
+In the dashboard, choose **By position** (role-based) or drag the eight weight sliders
+(archetype presets: *Balanced, Poacher, Playmaker, Ball-winner, Dribbler, Athlete*). Each
+player also gets a **FIFA-style card** — eight faces + OVR. Only players in the 10-match
+sample with **3+ matches** and data in all eight silos are ranked; the full table is exported
+to [`sample_leaderboard.csv`](sample_leaderboard.csv).
 
 ![Season leaderboard](../../../assets/viz/leaderboard.png)
 
