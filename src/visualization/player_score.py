@@ -50,16 +50,22 @@ SEASON_SILOS: dict[str, dict[str, float]] = {
                  "runs_box": 1, "runs": 1},
 }
 
-# Sample silos (from the 10-match dynamic events; per-appearance metrics).
-# Shooting is a SINGLE composite (shots + 9*goals) percentiled as one value, not an
-# average of separate shot/goal percentiles — otherwise a high-volume non-scorer could
-# out-rank a scorer. This way any goalscorer ranks above any non-scorer, and a player
-# with no shots or goals sits at the floor.
+# Sample silos (from the 10-match dynamic events). Each is a SINGLE composite of raw
+# sample TOTALS (volume over the tracked matches), percentiled LEAGUE-WIDE (absolute,
+# not position-relative). This is deliberate:
+#   * Volume totals (not tiny-sample per-appearance rates) mean a player who "hasn't had
+#     many shots" can't rate as an elite shooter off one game.
+#   * League-wide (not within-position) means a midfielder who barely shoots isn't graded
+#     against other midfielders and inflated — shooting is judged against everyone.
+#   * Shooting = shots + 9*goals, so goals dominate but volume counts; any goalscorer
+#     still ranks above a non-scorer, and zero shots/goals sits at the floor.
 SAMPLE_SILOS: dict[str, dict[str, float]] = {
-    "Shooting": {"shotval_pa": 1},
-    "Defending": {"regains_pa": 2, "pressures_pa": 1, "disruptions_pa": 1},
-    "Dribbling": {"carrydist_pa": 2, "carries_pa": 1, "progcarry_pa": 1.5},
+    "Shooting": {"shotval_total": 1},
+    "Defending": {"defval_total": 1},
+    "Dribbling": {"dribval_total": 1},
 }
+# Sample composites are ranked against the whole league, not within position.
+LEAGUE_METRICS = {"shotval_total", "defval_total", "dribval_total"}
 
 # Back-compat aliases (season scope is the default everywhere else).
 SILOS = SEASON_SILOS
@@ -119,14 +125,23 @@ def compute_scores(
 
     if include_sample:
         sample = load_sample()
-        rate_cols = sorted({c for m in SAMPLE_SILOS.values() for c in m})
-        out = out.merge(sample[rate_cols], left_on="player_id", right_index=True, how="left")
+        raw = ["shots", "goals", "regains", "pressures", "disruptions", "carries", "progcarries"]
+        out = out.merge(sample[raw], left_on="player_id", right_index=True, how="left")
+        # composite sample TOTALS (volume over the tracked matches). Goal weight 3 keeps
+        # goals worth more than a blank shot while letting shot VOLUME drive the rating,
+        # so a 2-shot cameo can't rate as an elite shooter.
+        out["shotval_total"] = out["shots"] + 3 * out["goals"]
+        out["defval_total"] = 2 * out["regains"] + out["disruptions"] + 0.5 * out["pressures"]
+        out["dribval_total"] = out["carries"] + 3 * out["progcarries"]
 
-    # 1) per-metric percentiles within position (sample metrics auto-restrict to the
-    #    sample pool, since rank ignores the NaNs of non-sample players)
+    # 1) per-metric percentiles — sample composites league-wide, everything else within
+    #    position (sample metrics auto-restrict to the sample pool since rank skips NaN)
     for metrics in silos.values():
         for col in metrics:
-            out[f"pct__{col}"] = _percentile_within(out, col, group_col)
+            if col in LEAGUE_METRICS:
+                out[f"pct__{col}"] = out[col].rank(pct=True, method="average") * 100
+            else:
+                out[f"pct__{col}"] = _percentile_within(out, col, group_col)
 
     # 2) silo scores = intra-silo weighted mean of metric percentiles
     for silo, metrics in silos.items():

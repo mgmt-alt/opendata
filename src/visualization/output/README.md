@@ -32,11 +32,13 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Passing** | PAS | beating xPass, completion %, volume, range |
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
-| **Shooting** † | SHO | one **shot value** = `shots + 9·goals` per app (goals ≫ shots) |
-| **Defending** † | DEF | pressing engagements + ball regains + disruptions |
-| **Dribbling** † | DRI | carries + carry distance + progressive carries |
+| **Shooting** † | SHO | **shot value** = `shots + 3·goals` (sample totals) |
+| **Defending** † | DEF | `2·regains + disruptions + 0.5·pressures` (sample totals) |
+| **Dribbling** † | DRI | `carries + 3·progressive carries` (sample totals) |
 
-† 10-match sample only (~155 players).
+† 10-match sample only (~155 players). Unlike the season silos, the three sample silos
+are **volume totals** ranked **league-wide** (not per-appearance rates, and not
+within-position). This is deliberate — see below.
 
 **Two scopes.** The first five silos come from the *all-games* aggregates and cover
 every player. The three sample silos come from the per-match **dynamic events** in the 10
@@ -44,12 +46,26 @@ tracked matches. The dashboard **defaults to all eight silos** (matching the com
 radar); its green **Shooting · Defending · Dribbling (10-match)** toggle switches to the
 5-silo, all-players season view. There is **no xG** anywhere in the open data.
 
-**Shooting is a single composite, not an average of separate percentiles.** Averaging a
-shots-percentile and a goals-percentile lets a high-volume non-scorer out-rank a scorer,
-so instead we percentile one value, `shots + 9·goals` per appearance (a goal ≈ 9 blank
-shots, ~league conversion). This guarantees every goalscorer ranks above every
-non-scorer, and a player with no shots or goals sits at the floor. (Shots on target would
-sit between goals and shots, but the open data has no on-target flag.)
+**Why the sample silos are volume totals, ranked league-wide.** Two failure modes to avoid:
+1. *Per-appearance rates* explode on tiny samples — a player with 4 shots in one tracked
+   game looks like a 4-shots-per-game monster. Using **totals over the sample** means a
+   player who "hasn't had many shots" simply has a low total.
+2. *Within-position* percentiles inflate specialists in the wrong position — a midfielder
+   who barely shoots would be graded only against other midfielders and look elite. Ranking
+   the sample silos **league-wide** judges shooting against everyone.
+
+**Shooting is one composite, not an average of separate shot/goal percentiles** (which
+would let a high-volume non-scorer out-rank a scorer). It is `shots + 3·goals`: shot
+volume drives it, a goal is worth more than a blank shot, every goalscorer still ranks
+above a player with none, and zero shots/goals sits at the floor. (Shots on target would
+sit between goals and shots, but the open data has no on-target flag or xG.)
+
+**Archetype presets are single-silo**, so each reflects exactly that skill's ranking:
+*Poacher* = Shooting, *Ball-winner* = Defending, *Dribbler* = Dribbling, *Playmaker* =
+Passing + Creation, *Athlete* = Pace + Physical. A complete all-rounder can top the
+position-weighted **overall**, but can't top an archetype on unrelated strengths — e.g.
+Cáceres (2 shots in the sample) is nowhere near the Poacher list, while genuine volume
+shooters lead it.
 
 Position weights extend to all eight silos (e.g. a centre-back's Defending is heavily
 weighted, a forward's Shooting). Both rankings export to

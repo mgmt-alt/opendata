@@ -706,11 +706,13 @@ const SEASON_SILOS={
   'Creation':{dangerous_passes:2,linebreaks:2,pass_shot:2,pass_torun:1,pass_goal:1},
   'Movement':{dangerous_runs:2,runs_received:2,run_shot:2,runs_targeted:1,runs_box:1,runs:1},
 };
+// Sample silos = single composite of raw sample TOTALS (volume), ranked LEAGUE-WIDE.
 const SAMPLE_SILOS={
-  'Shooting':{shotval_pa:1},   // single composite (shots + 9*goals) so scorers rank above non-scorers
-  'Defending':{regains_pa:2,pressures_pa:1,disruptions_pa:1},
-  'Dribbling':{carrydist_pa:2,carries_pa:1,progcarry_pa:1.5},
+  'Shooting':{shotval_total:1},   // shots + 3*goals (volume drives it, goals worth more)
+  'Defending':{defval_total:1},   // 2*regains + disruptions + 0.5*pressures
+  'Dribbling':{dribval_total:1},  // carries + 3*progressive carries
 };
+const LEAGUE_METRICS=new Set(['shotval_total','defval_total','dribval_total']);
 const ALL_SILOS={...SEASON_SILOS,...SAMPLE_SILOS};
 const SEASON_NAMES=Object.keys(SEASON_SILOS);
 const SAMPLE_NAMES=Object.keys(SAMPLE_SILOS);
@@ -724,18 +726,29 @@ const POSITION_WEIGHTS={
   'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5,Shooting:2,Defending:0.8,Dribbling:2.5},
   'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5,Shooting:3,Defending:0.5,Dribbling:1.5},
 };
-// flatten the 10-match sample rate metrics onto each player (null when not in the sample)
-const SAMPLE_METRICS=['shotval_pa','shots_pa','goals_pa','regains_pa','pressures_pa','disruptions_pa','carrydist_pa','carries_pa','progcarry_pa'];
-DATA.forEach(d=>SAMPLE_METRICS.forEach(m=>{d[m]=d.shot?d.shot[m]:null;}));
-// precompute percentiles within position for every metric, then all silo scores
+// build the composite sample TOTALS on each player (null when not in the sample)
+DATA.forEach(d=>{const sh=d.shot;
+  d.shotval_total = sh?sh.shots + 3*sh.goals:null;
+  d.defval_total  = sh?2*sh.regains + sh.disruptions + 0.5*sh.pressures:null;
+  d.dribval_total = sh?sh.carries + 3*sh.progcarries:null;
+});
+// percentile helper for a value within a sorted array of comparators (avg-rank, %)
+function pctIn(vals,v){if(v==null||!vals.length)return null;
+  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);return ((lo+hi)/2+1)/vals.length*100;}
+// precompute percentiles: sample composites LEAGUE-WIDE, all else within position
 (function computeScores(){
   const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
   const metrics=[...new Set(Object.values(ALL_SILOS).flatMap(o=>Object.keys(o)))];
-  for(const pos in byPos){const rows=byPos[pos];
-    metrics.forEach(m=>{const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
-      rows.forEach(r=>{if(r[m]==null){r['pct__'+m]=null;return;}
-        let lo=vals.indexOf(r[m]),hi=vals.lastIndexOf(r[m]);
-        r['pct__'+m]=vals.length?((lo+hi)/2+1)/vals.length*100:null;});});}
+  metrics.forEach(m=>{
+    if(LEAGUE_METRICS.has(m)){
+      const vals=DATA.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+      DATA.forEach(r=>{r['pct__'+m]=pctIn(vals,r[m]);});
+    }else{
+      for(const pos in byPos){const rows=byPos[pos];
+        const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+        rows.forEach(r=>{r['pct__'+m]=pctIn(vals,r[m]);});}
+    }
+  });
   DATA.forEach(d=>{ALL_NAMES.forEach(s=>{let num=0,den=0;
     for(const m in ALL_SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}
     d['silo__'+s]=den>0?num/den:null;});});
@@ -750,13 +763,16 @@ function overallScore(d){const w=siloWeights(d);let num=0,den=0;
   activeNames().forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
 function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>d['silo__'+s]!=null);
   const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*d['silo__'+s]);return o;}
+// Archetype presets are silo-FOCUSED: the named silo(s) dominate so a player can't top
+// an archetype on unrelated strengths (a non-shooter can't be the top "Poacher").
 const LB_MODES={
   'By position':null,
   'Balanced':{Pace:1,Physical:1,Passing:1,Creation:1,Movement:1,Shooting:1,Defending:1,Dribbling:1},
-  'Athlete':{Pace:3,Physical:3,Passing:1,Creation:1,Movement:1,Shooting:1,Defending:1,Dribbling:1},
-  'Creator':{Pace:1,Physical:1,Passing:2,Creation:3,Movement:2,Shooting:1,Defending:0.5,Dribbling:2},
-  'Engine':{Pace:2,Physical:3,Passing:1,Creation:1,Movement:2,Shooting:0.5,Defending:2,Dribbling:1},
-  'Poacher':{Pace:2,Physical:1,Passing:0.5,Creation:2,Movement:3,Shooting:3,Defending:0.3,Dribbling:1},
+  'Poacher':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:10,Defending:0,Dribbling:0},
+  'Playmaker':{Pace:0,Physical:0,Passing:10,Creation:8,Movement:0,Shooting:0,Defending:0,Dribbling:0},
+  'Ball-winner':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:10,Dribbling:0},
+  'Dribbler':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:0,Dribbling:10},
+  'Athlete':{Pace:10,Physical:10,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:0,Dribbling:0},
 };
 let lbLimit=15;
 function renderLeaderboard(){
@@ -819,7 +835,7 @@ function refreshWeightUI(){
       [...modes.querySelectorAll('.chip.mode')].forEach(x=>x.setAttribute('aria-pressed',x===c));
       if(LB_MODES[name]===null){scoreMode='role';}
       else{scoreMode='custom';ALL_NAMES.forEach(s=>{customW[s]=LB_MODES[name][s]??1;
-        const sl=document.getElementById('w-'+s);if(sl)sl.value=(LB_MODES[name][s]??1)*20;});}
+        const sl=document.getElementById('w-'+s);if(sl)sl.value=Math.min(100,(LB_MODES[name][s]??1)*10);});}
       document.getElementById('weights').classList.toggle('dim',scoreMode==='role');
       renderLeaderboard();
     };
@@ -837,8 +853,8 @@ function refreshWeightUI(){
     ctl.appendChild(el('div',{class:'top'},[
       el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}`}),
       el('span',{class:'pc',id:'wpc-'+s})]));
-    const r=el('input',{type:'range',min:'0',max:'100',value:'20',step:'5',id:'w-'+s});
-    r.oninput=()=>{customW[s]=(+r.value/20)||0.0001;scoreMode='custom';
+    const r=el('input',{type:'range',min:'0',max:'100',value:'10',step:'5',id:'w-'+s});
+    r.oninput=()=>{customW[s]=(+r.value/10)||0.0001;scoreMode='custom';
       [...document.querySelectorAll('#lbModes .chip.mode')].forEach(x=>x.setAttribute('aria-pressed',false));
       document.getElementById('weights').classList.remove('dim');renderLeaderboard();};
     ctl.appendChild(r);box.appendChild(ctl);
