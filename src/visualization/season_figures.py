@@ -28,7 +28,8 @@ from matplotlib.lines import Line2D
 
 from src.visualization.build_dashboard_data import load_merged, RUN_FAMILIES  # noqa: F401
 from src.visualization.player_score import (
-    compute_scores, SILOS, SILO_NAMES, POSITION_WEIGHTS, BALANCED_WEIGHTS, UNAVAILABLE,
+    compute_scores, SILO_NAMES, ALL_SILO_NAMES, SAMPLE_SILO_NAMES,
+    POSITION_WEIGHTS, BALANCED_WEIGHTS,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -43,7 +44,7 @@ SURFACE = "#fcfcfb"
 BLUE = "#2a78d6"
 RED = "#e34948"
 MID = "#c9c8c2"
-CAT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
+CAT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
 
 mpl.rcParams.update({
     "font.family": "DejaVu Sans",
@@ -190,27 +191,28 @@ def fig_profile(df, player_name=None):
     _save(fig, "player_profile.png")
 
 
-SILO_COLORS = {name: CAT[i] for i, name in enumerate(SILO_NAMES)}
+SILO_COLORS = {name: CAT[i] for i, name in enumerate(ALL_SILO_NAMES)}
 
 
-def _silo_contributions(row):
+def _silo_contributions(row, names):
     """Normalised position-aware weight * silo score for each silo (sums to Overall)."""
     w = POSITION_WEIGHTS.get(row["position_group"], BALANCED_WEIGHTS)
-    present = {s: row[f"silo__{s}"] for s in SILO_NAMES if pd.notna(row[f"silo__{s}"])}
+    present = {s: row[f"silo__{s}"] for s in names if pd.notna(row[f"silo__{s}"])}
     tot_w = sum(w[s] for s in present) or 1.0
     return {s: (w[s] / tot_w) * present[s] for s in present}
 
 
-def fig_leaderboard(df, n=20):
-    """Top-n SkillCorner Score leaderboard, each bar split into the five weighted
-    silo contributions (position-aware weights) that sum to the Overall Score."""
-    ranked = compute_scores(df).head(n).iloc[::-1]  # best at top
+def fig_leaderboard(df, n=20, include_sample=False, out=None):
+    """Top-n leaderboard, each bar split into the weighted silo contributions
+    (position-aware) that sum to the Overall Score."""
+    names = ALL_SILO_NAMES if include_sample else SILO_NAMES
+    ranked = compute_scores(df, include_sample=include_sample).head(n).iloc[::-1]
 
-    fig, ax = plt.subplots(figsize=(11.5, 9))
+    fig, ax = plt.subplots(figsize=(12 if include_sample else 11.5, 9))
     y = np.arange(len(ranked))
     left = np.zeros(len(ranked))
-    contribs = [_silo_contributions(r) for _, r in ranked.iterrows()]
-    for s in SILO_NAMES:
+    contribs = [_silo_contributions(r, names) for _, r in ranked.iterrows()]
+    for s in names:
         vals = np.array([c.get(s, 0.0) for c in contribs])
         ax.barh(y, vals, left=left, height=0.66, color=SILO_COLORS[s],
                 edgecolor=SURFACE, linewidth=1.0, zorder=3, label=s)
@@ -228,79 +230,121 @@ def fig_leaderboard(df, n=20):
     ax.tick_params(left=False)
     ax.grid(True, axis="x", color=GRID, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=5, frameon=False,
-              fontsize=9.5, handlelength=1.0, columnspacing=1.4)
-    ax.set_title("A-League 2024/25 leaderboard — the SkillCorner Score",
-                 fontsize=16, fontweight="bold", color=INK, loc="left", pad=26)
-    ax.text(0, 1.02, "Five position-relative silos, weighted by position · 3+ matches · "
-            "not measurable from tracking: shooting, dribbling, defending",
-            transform=ax.transAxes, fontsize=10, color=INK2)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=len(names), frameon=False,
+              fontsize=9 if include_sample else 9.5, handlelength=1.0,
+              columnspacing=1.1 if include_sample else 1.4)
+    subtitle = ("Eight position-relative silos (adds Shooting/Defending/Dribbling from the "
+                "10-match sample) · sampled players only"
+                if include_sample else
+                "Five position-relative silos, weighted by position · all 60+ min players")
+    title = ("A-League 2024/25 — full-profile leaderboard (8 silos)" if include_sample
+             else "A-League 2024/25 leaderboard — the SkillCorner Score")
+    ax.set_title(title, fontsize=16, fontweight="bold", color=INK, loc="left", pad=26)
+    ax.text(0, 1.02, subtitle, transform=ax.transAxes, fontsize=10, color=INK2)
     fig.text(0.99, 0.005, CREDIT, ha="right", fontsize=8, color=MUTED)
     fig.tight_layout(rect=[0, 0.05, 1, 0.95])
-    _save(fig, "leaderboard.png")
+    _save(fig, out or ("leaderboard_full.png" if include_sample else "leaderboard.png"))
 
 
 def fig_player_card(df, player_name=None):
-    """A FIFA-style card: the five measurable silo faces + Overall, with the three
-    faces this dataset cannot populate shown greyed-out for honesty."""
-    ranked = compute_scores(df)
+    """A FIFA-style card. If the player is in the 10-match sample, all eight faces
+    are shown; otherwise the five season faces plus the three sample faces greyed."""
+    full = compute_scores(df, include_sample=True)
+    season = compute_scores(df)
     if player_name:
-        row = ranked[ranked["player_name"] == player_name].iloc[0]
+        row = full[full["player_name"] == player_name]
+        row = (row.iloc[0] if len(row)
+               else season[season["player_name"] == player_name].iloc[0])
     else:
-        row = ranked.iloc[0]  # league #1
-    faces = [(s, row[f"silo__{s}"]) for s in SILO_NAMES]
+        row = full.iloc[0]  # #1 full-profile player
+    in_sample = all(pd.notna(row.get(f"silo__{s}", np.nan)) for s in SAMPLE_SILO_NAMES)
     ovr = row["score_overall"]
 
-    fig, ax = plt.subplots(figsize=(6.4, 8))
+    fig, ax = plt.subplots(figsize=(6.6, 8.4))
     ax.axis("off")
-    # card background
     ax.add_patch(mpl.patches.FancyBboxPatch(
-        (0.06, 0.04), 0.88, 0.92, boxstyle="round,pad=0.02,rounding_size=0.04",
+        (0.05, 0.03), 0.90, 0.94, boxstyle="round,pad=0.02,rounding_size=0.035",
         transform=ax.transAxes, facecolor=SURFACE, edgecolor="#c3c2b7", linewidth=1.5, zorder=1))
-    # OVR + name header
-    ax.text(0.14, 0.88, f"{ovr:.0f}", fontsize=52, fontweight="bold", color=BLUE,
+    ax.text(0.12, 0.905, f"{ovr:.0f}", fontsize=48, fontweight="bold", color=BLUE,
             transform=ax.transAxes, va="center")
-    ax.text(0.14, 0.80, "OVR", fontsize=13, fontweight="bold", color=INK2, transform=ax.transAxes)
-    ax.text(0.42, 0.885, row["player_name"], fontsize=16, fontweight="bold", color=INK,
+    ax.text(0.12, 0.845, "OVR", fontsize=12, fontweight="bold", color=INK2, transform=ax.transAxes)
+    ax.text(0.40, 0.915, row["player_name"], fontsize=15, fontweight="bold", color=INK,
             transform=ax.transAxes, va="center")
-    ax.text(0.42, 0.835, f"{row['position_group']} · {row['team_short']}", fontsize=11,
+    ax.text(0.40, 0.875, f"{row['position_group']} · {row['team_short']}", fontsize=10.5,
             color=INK2, transform=ax.transAxes, va="center")
-    ax.text(0.42, 0.80, f"#{int(row['rank'])} in the A-League · {int(row['matches'])} matches",
-            fontsize=10, color=MUTED, transform=ax.transAxes, va="center")
-    ax.plot([0.12, 0.88], [0.75, 0.75], color="#c3c2b7", lw=1, transform=ax.transAxes)
-    # five measurable faces
-    y0 = 0.685
+    ax.text(0.40, 0.845, f"#{int(row['rank'])} "
+            + ("(full profile)" if in_sample else "(season)") + f" · {int(row['matches'])} matches",
+            fontsize=9.5, color=MUTED, transform=ax.transAxes, va="center")
+    ax.plot([0.10, 0.90], [0.80, 0.80], color="#c3c2b7", lw=1, transform=ax.transAxes)
+
+    faces = [(s, row.get(f"silo__{s}", np.nan)) for s in ALL_SILO_NAMES]
+    y0 = 0.745
     for i, (name, val) in enumerate(faces):
-        yy = y0 - i * 0.072
-        ax.text(0.145, yy, f"{val:.0f}", fontsize=22, fontweight="bold",
-                color=SILO_COLORS[name], transform=ax.transAxes, va="center", ha="right")
-        ax.text(0.20, yy, name.upper(), fontsize=13, fontweight="bold", color=INK,
-                transform=ax.transAxes, va="center")
-        # mini bar
-        ax.add_patch(plt.Rectangle((0.55, yy - 0.017), 0.33, 0.026, transform=ax.transAxes,
+        yy = y0 - i * 0.083
+        avail = pd.notna(val)
+        col = SILO_COLORS[name] if avail else "#c3c2b7"
+        ax.text(0.135, yy, f"{val:.0f}" if avail else "—", fontsize=20, fontweight="bold",
+                color=col, transform=ax.transAxes, va="center", ha="right")
+        tag = "" if name in SILO_NAMES else " *"
+        ax.text(0.19, yy, name.upper() + tag, fontsize=12.5, fontweight="bold",
+                color=INK if avail else "#b7b6b0", transform=ax.transAxes, va="center")
+        ax.add_patch(plt.Rectangle((0.54, yy - 0.016), 0.35, 0.024, transform=ax.transAxes,
                      facecolor=GRID, edgecolor="none", zorder=2))
-        ax.add_patch(plt.Rectangle((0.55, yy - 0.017), 0.33 * val / 100, 0.026,
-                     transform=ax.transAxes, facecolor=SILO_COLORS[name], edgecolor="none", zorder=3))
-    # unavailable faces (greyed)
-    ax.plot([0.12, 0.88], [0.30, 0.30], color="#e1e0d9", lw=1, transform=ax.transAxes)
-    ax.text(0.14, 0.265, "Not captured by broadcast tracking", fontsize=9.5,
-            fontweight="bold", color=MUTED, transform=ax.transAxes)
-    for i, (name, why) in enumerate(UNAVAILABLE.items()):
-        yy = 0.215 - i * 0.05
-        ax.text(0.145, yy, "—", fontsize=18, fontweight="bold", color="#c3c2b7",
-                transform=ax.transAxes, va="center", ha="right")
-        ax.text(0.20, yy, name.upper(), fontsize=12, color="#b7b6b0", fontweight="bold",
-                transform=ax.transAxes, va="center")
-    fig.text(0.5, 0.015, "SkillCorner Score · faces = position-relative percentile silos",
-             ha="center", fontsize=8, color=MUTED)
+        if avail:
+            ax.add_patch(plt.Rectangle((0.54, yy - 0.016), 0.35 * val / 100, 0.024,
+                         transform=ax.transAxes, facecolor=col, edgecolor="none", zorder=3))
+    note = ("* Shooting / Defending / Dribbling from the 10-match sample · no xG"
+            if in_sample else
+            "* Shooting / Defending / Dribbling need the 10-match sample (n/a here)")
+    fig.text(0.5, 0.02, note, ha="center", fontsize=8.5, color=MUTED)
     _save(fig, "player_card.png")
+
+
+def fig_radar(df, players=None, include_sample=True):
+    """Overlaid radar comparing players across the silo axes (0-100 percentiles)."""
+    names = ALL_SILO_NAMES if include_sample else SILO_NAMES
+    ranked = compute_scores(df, include_sample=include_sample)
+    if players is None:  # default: top attacker vs top defender in the sample
+        players = [ranked.iloc[0]["player_name"],
+                   ranked[ranked["position_group"] == "Central Defender"].iloc[0]["player_name"]]
+    rows = [ranked[ranked["player_name"] == p].iloc[0] for p in players]
+
+    ang = np.linspace(0, 2 * np.pi, len(names), endpoint=False)
+    ang = np.concatenate([ang, ang[:1]])
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={"polar": True})
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0, 100)
+    ax.set_yticks([25, 50, 75])
+    ax.set_yticklabels(["25", "50", "75"], color=MUTED, fontsize=8)
+    ax.set_xticks(ang[:-1])
+    ax.set_xticklabels([n.upper() for n in names], fontsize=10.5, fontweight="bold", color=INK)
+    ax.tick_params(axis="x", pad=14)
+    ax.grid(color=GRID, linewidth=0.9)
+    ax.spines["polar"].set_color(GRID)
+    duo = [CAT[0], CAT[1]]
+    for r, col in zip(rows, duo):
+        vals = np.array([r.get(f"silo__{s}", np.nan) for s in names], dtype=float)
+        vals = np.nan_to_num(vals, nan=0.0)
+        vals = np.concatenate([vals, vals[:1]])
+        ax.plot(ang, vals, color=col, linewidth=2.4, zorder=3,
+                label=f"{r['player_name']} ({r['position_group']})")
+        ax.fill(ang, vals, color=col, alpha=0.14, zorder=2)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.10), ncol=1, frameon=False, fontsize=11)
+    ax.set_title("Player comparison — SkillCorner silos", fontsize=15, fontweight="bold",
+                 color=INK, pad=32)
+    fig.text(0.5, 0.935, "Percentile within position (0–100) · "
+             + ("8 silos, 10-match sample" if include_sample else "5 season silos"),
+             ha="center", fontsize=9, color=MUTED)
+    fig.subplots_adjust(bottom=0.16, top=0.88)
+    _save(fig, "radar_compare.png")
 
 
 def fig_shooting(n=16):
     """Top shot-takers from the 10-match dynamic-events sample: total shots split
     into goals vs non-scoring shots. Explicitly a sample, and xG-free."""
-    from src.visualization.dynamic_events_agg import shooting_table
-    tbl = shooting_table().head(n).iloc[::-1]
+    from src.visualization.dynamic_events_agg import sample_table
+    tbl = sample_table().sort_values(["shots", "goals"], ascending=False).head(n).iloc[::-1]
     fig, ax = plt.subplots(figsize=(10.5, 7.5))
     y = np.arange(len(tbl))
     non_goal = (tbl["shots"] - tbl["goals"]).to_numpy()
@@ -313,7 +357,7 @@ def fig_shooting(n=16):
         ax.text(tot + 0.15, yi, f"{int(tot)}" + (f"  ·  {int(g)}G" if g else ""),
                 va="center", ha="left", fontsize=10, fontweight="bold", color=INK)
     ax.set_yticks(y)
-    ax.set_yticklabels([f"{r.player_name}  ·  {r.team}  ({int(r.sample_apps)} apps)"
+    ax.set_yticklabels([f"{r.player_name}  ·  {r.team}  ({int(r.apps)} apps)"
                         for r in tbl.itertuples()], fontsize=9.5, color=INK2)
     ax.set_xlim(0, tbl["shots"].max() + 2.5)
     ax.set_xlabel("Shots in the 10-match sample", fontsize=10)
@@ -342,8 +386,10 @@ def _save(fig, name):
 def main():
     df = load_merged()
     print(f"Loaded {len(df)} players. Rendering figures ->")
-    fig_leaderboard(df)
+    fig_leaderboard(df)                       # season, 5 silos
+    fig_leaderboard(df, include_sample=True)  # full profile, 8 silos
     fig_player_card(df)
+    fig_radar(df)
     fig_shooting()
     fig_athletic(df)
     fig_passing(df)

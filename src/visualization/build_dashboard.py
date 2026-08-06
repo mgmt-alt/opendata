@@ -21,7 +21,7 @@ from src.visualization import dynamic_events_agg as shooting
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE / "season_dashboard.template.html"
 DATA_JSON = HERE / "output" / "season_players.json"
-SHOOTING_JSON = HERE / "output" / "sample_shooting.json"
+SHOOTING_JSON = HERE / "output" / "sample_events.json"
 OUT_HTML = HERE / "output" / "season_dashboard.html"
 TOKEN = "__SEASON_DATA__"
 SHOOTING_TOKEN = "__SAMPLE_SHOOTING__"

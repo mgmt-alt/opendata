@@ -9,6 +9,7 @@
     --series-1:#2a78d6;         /* blue */
     --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;   /* diverging */
     --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300;
+    --c7:#4a3aa7; --c8:#e34948;
     --good:#006300;
     --shadow:0 1px 2px rgba(11,11,11,.05),0 4px 16px rgba(11,11,11,.06);
   }
@@ -20,7 +21,7 @@
       --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
       --series-1:#3987e5;
       --pos:#3987e5; --neg:#e66767; --mid:#383835;
-      --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300;
+      --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c8:#e66767;
       --good:#0ca30c;
       --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.5);
     }
@@ -123,6 +124,16 @@
   .pf-face .fbar i{display:block;height:100%}
   .pf-na{font-size:11.5px;color:var(--muted);align-self:center;padding-left:2px}
   .pf-na b{color:var(--ink-2);font-weight:600}
+  .pf-face.sample{border-style:dashed}
+  .chip.toggle{margin-left:6px}
+  .chip.toggle[aria-pressed="true"]{background:var(--c6);border-color:var(--c6);color:#fff}
+  /* radar */
+  .radar-wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+  .radar-controls{display:flex;flex-direction:column;gap:10px;flex:0 1 240px;min-width:0;max-width:100%}
+  .radar-pick{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0}
+  .radar-pick .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .radar-pick select{flex:1 1 auto;width:100%;min-width:0;max-width:100%}
+  .radar-svg{flex:1 1 320px;min-width:280px;max-width:100%}
   /* team bars */
   .tbar-row{display:grid;grid-template-columns:140px 1fr 52px;align-items:center;gap:10px;padding:2.5px 0}
   .tbar-lab{font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -213,24 +224,27 @@
   <section id="lb-section">
     <div class="sec-head">
       <h2>The SkillCorner Score — a FIFA-style rating</h2>
-      <p>One number per player, <strong>0–100</strong>, built from <strong>five silos</strong> the tracking data can
-        actually see. Each silo is a weighted blend of metrics, each ranked as a percentile
-        <em>within the player's position</em>. The overall combines the silos —
+      <p>One number per player, <strong>0–100</strong>, built from position-relative silos — each a weighted blend of
+        metrics ranked as percentiles <em>within the player's position</em>, combined
         <strong>weighted by position</strong> by default (a striker leans on Creation &amp; Movement, a centre-back on
-        Physical &amp; Passing), or set your own weights.</p>
+        Physical &amp; Passing) or with your own weights. Five season silos cover every player; flip the green toggle to
+        add <strong>Shooting · Defending · Dribbling</strong> from the 10-match sample (that ranking is limited to the
+        sampled players).</p>
     </div>
     <div class="card">
       <div class="lb-modes" id="lbModes"></div>
       <div class="weights" id="weights"></div>
       <div class="legend" id="lbLegend"></div>
       <div id="leaderboard"></div>
+      <div class="caption" id="lbElig"></div>
       <div class="lb-note" id="lbNote">
         <strong>Scope:</strong> this season score uses the <em>all-games</em> aggregates, which cover movement &amp;
         on-ball passing only — so it leaves out <b>Shooting</b>, <b>Dribbling</b> and <b>Defending</b>.
         Those <em>do</em> exist in the per-match dynamic events (see the Shooting section below), but only for the
         10 tracked matches, so they're kept out of this season-wide, all-players ranking rather than applied unevenly.
       </div>
-      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in all five silos.
+      <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in every active silo
+        (with the 10-match toggle on, that means players who feature in the tracked matches).
         Percentiles use the full positional pool, so a player's standing never depends on the filter.
         Click any row to load that player's profile below.</div>
     </div>
@@ -307,6 +321,25 @@
       <div class="pf-head" id="pfHead"></div>
       <div class="pf-faces" id="pfFaces"></div>
       <div class="profile-grid" id="profile"></div>
+    </div>
+  </section>
+
+  <!-- COMPARE (radar) -->
+  <section id="compare-section">
+    <div class="sec-head">
+      <h2>Compare players — silo radar</h2>
+      <p>Two players across every silo (percentile within position, 0–100). Turn on the 10-match toggle in the
+        leaderboard above to add the Shooting / Defending / Dribbling axes.</p>
+    </div>
+    <div class="card">
+      <div class="radar-wrap">
+        <div class="radar-controls">
+          <div class="radar-pick"><span class="sw" style="background:var(--c1)"></span><select id="radarA"></select></div>
+          <div class="radar-pick"><span class="sw" style="background:var(--c2)"></span><select id="radarB"></select></div>
+          <div class="caption" style="margin-top:2px">Tip: click any leaderboard or shooting row to load a player into their profile; use these pickers to compare two.</div>
+        </div>
+        <div class="radar-svg"><svg id="radar"></svg></div>
+      </div>
     </div>
   </section>
 
@@ -560,27 +593,19 @@ function renderProfile(){
   faces.appendChild(el('div',{class:'pf-ovr'},[
     el('div',{class:'big',text:ovr==null?'—':Math.round(ovr)}),
     el('div',{class:'lbl',text:'OVR'})]));
-  SILO_NAMES.forEach(s=>{
-    const v=d['silo__'+s];
+  ALL_NAMES.forEach(s=>{
+    const sample=SAMPLE_NAMES.includes(s);
+    const v=d['silo__'+s];const avail=v!=null;
     const bar=el('div',{class:'fbar'});const fill=el('i');
-    fill.style.width=(v==null?0:v)+'%';fill.style.background=SILO_COLORS[s];bar.appendChild(fill);
-    faces.appendChild(el('div',{class:'pf-face'},[
-      el('div',{class:'fv',text:v==null?'—':Math.round(v),style:`color:${SILO_COLORS[s]}`}),
-      el('div',{class:'fl',text:s}),bar]));
-  });
-  // Shooting face — a real face from the 10-match sample when available (not in the season OVR)
-  if(d.shot){
-    const v=d.shot.pct;const bar=el('div',{class:'fbar'});const fill=el('i');
-    fill.style.width=v+'%';fill.style.background='var(--good)';bar.appendChild(fill);
-    const face=el('div',{class:'pf-face',style:'border-style:dashed'},[
-      el('div',{class:'fv',text:Math.round(v),style:'color:var(--good)'}),
-      el('div',{class:'fl',html:'Shooting <span style="opacity:.55">*</span>'}),bar]);
-    face.title=`${d.shot.shots} shots · ${d.shot.goals} goals in ${d.shot.apps} tracked matches`;
+    fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
+    const face=el('div',{class:'pf-face'+(sample?' sample':'')},[
+      el('div',{class:'fv',text:avail?Math.round(v):'—',style:`color:${avail?SILO_COLORS[s]:'var(--muted)'}`}),
+      el('div',{class:'fl',html:s+(sample?' <span style="opacity:.55">*</span>':'')}),bar]);
+    if(sample&&d.shot)face.title=`${d.shot.shots} shots · ${d.shot.goals} goals · ${d.shot.regains} regains · ${d.shot.carries} carries in ${d.shot.apps} tracked matches`;
     faces.appendChild(face);
-  }
-  const na=d.shot?['Dribbling','Defending']:UNAVAILABLE;
+  });
   faces.appendChild(el('div',{class:'pf-na',html:
-    `${d.shot?'*10-match sample · ':''}not in score:<br><b>${na.join(' · ')}</b>`}));
+    (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no xG in data'}));
   // percentile detail
   const box=document.getElementById('profile');box.innerHTML='';
   PF_METRICS.forEach(([grp,metrics])=>{
@@ -673,63 +698,77 @@ function renderRunMix(){
     `<span class="item"><span class="swatch" style="background:${RUN_COLORS[i]}"></span>${f}</span>`).join('');
 }
 
-// ---------- SKILLCORNER SCORE (5 FIFA-style silos) ----------
-const SILOS={
+// ---------- SKILLCORNER SCORE (FIFA-style silos) ----------
+const SEASON_SILOS={
   'Pace':{top_speed:3,sprints:2,expl_sprint:1.5,high_accel:1},
   'Physical':{distance:2,m_per_min:2,hi_count:2,hsr_dist:1,high_decel:1},
   'Passing':{pass_over:3,pass_pct:2,pass_vol:1,pass_dist:1},
   'Creation':{dangerous_passes:2,linebreaks:2,pass_shot:2,pass_torun:1,pass_goal:1},
   'Movement':{dangerous_runs:2,runs_received:2,run_shot:2,runs_targeted:1,runs_box:1,runs:1},
 };
-const SILO_NAMES=Object.keys(SILOS);
-const SILO_COLORS={Pace:'var(--c1)',Physical:'var(--c2)',Passing:'var(--c3)',Creation:'var(--c4)',Movement:'var(--c5)'};
-const POSITION_WEIGHTS={
-  'Central Defender':{Pace:1,Physical:2.5,Passing:2.5,Creation:0.5,Movement:0.5},
-  'Full Back':{Pace:2,Physical:2,Passing:1.5,Creation:1.5,Movement:1.5},
-  'Midfield':{Pace:1,Physical:1.5,Passing:2.5,Creation:2,Movement:1.5},
-  'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5},
-  'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5},
+const SAMPLE_SILOS={
+  'Shooting':{shots_pa:2,goals_pa:2},
+  'Defending':{regains_pa:2,pressures_pa:1,disruptions_pa:1},
+  'Dribbling':{carrydist_pa:2,carries_pa:1,progcarry_pa:1.5},
 };
-const UNAVAILABLE=['Shooting','Dribbling','Defending'];
-// precompute percentiles within position for every silo metric, then silo scores
+const ALL_SILOS={...SEASON_SILOS,...SAMPLE_SILOS};
+const SEASON_NAMES=Object.keys(SEASON_SILOS);
+const SAMPLE_NAMES=Object.keys(SAMPLE_SILOS);
+const ALL_NAMES=Object.keys(ALL_SILOS);
+const SILO_COLORS={Pace:'var(--c1)',Physical:'var(--c2)',Passing:'var(--c3)',Creation:'var(--c4)',
+  Movement:'var(--c5)',Shooting:'var(--c6)',Defending:'var(--c7)',Dribbling:'var(--c8)'};
+const POSITION_WEIGHTS={
+  'Central Defender':{Pace:1,Physical:2.5,Passing:2.5,Creation:0.5,Movement:0.5,Shooting:0.3,Defending:3,Dribbling:0.7},
+  'Full Back':{Pace:2,Physical:2,Passing:1.5,Creation:1.5,Movement:1.5,Shooting:0.5,Defending:2,Dribbling:1.5},
+  'Midfield':{Pace:1,Physical:1.5,Passing:2.5,Creation:2,Movement:1.5,Shooting:1,Defending:2,Dribbling:1.5},
+  'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5,Shooting:2,Defending:0.8,Dribbling:2.5},
+  'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5,Shooting:3,Defending:0.5,Dribbling:1.5},
+};
+// flatten the 10-match sample rate metrics onto each player (null when not in the sample)
+const SAMPLE_METRICS=['shots_pa','goals_pa','regains_pa','pressures_pa','disruptions_pa','carrydist_pa','carries_pa','progcarry_pa'];
+DATA.forEach(d=>SAMPLE_METRICS.forEach(m=>{d[m]=d.shot?d.shot[m]:null;}));
+// precompute percentiles within position for every metric, then all silo scores
 (function computeScores(){
   const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
-  const metrics=[...new Set(Object.values(SILOS).flatMap(o=>Object.keys(o)))];
+  const metrics=[...new Set(Object.values(ALL_SILOS).flatMap(o=>Object.keys(o)))];
   for(const pos in byPos){const rows=byPos[pos];
     metrics.forEach(m=>{const vals=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
       rows.forEach(r=>{if(r[m]==null){r['pct__'+m]=null;return;}
         let lo=vals.indexOf(r[m]),hi=vals.lastIndexOf(r[m]);
-        r['pct__'+m]=((lo+hi)/2+1)/vals.length*100;});});}
-  DATA.forEach(d=>{SILO_NAMES.forEach(s=>{let num=0,den=0;
-    for(const m in SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=SILOS[s][m]*p;den+=SILOS[s][m];}}
+        r['pct__'+m]=vals.length?((lo+hi)/2+1)/vals.length*100:null;});});}
+  DATA.forEach(d=>{ALL_NAMES.forEach(s=>{let num=0,den=0;
+    for(const m in ALL_SILOS[s]){const p=d['pct__'+m];if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}
     d['silo__'+s]=den>0?num/den:null;});});
 })();
+let includeSample=false;                    // 8 silos (sample) vs 5 season silos
 let scoreMode='role';                       // 'role' (position-aware) or 'custom'
-const customW={};SILO_NAMES.forEach(s=>customW[s]=1);
-function balanced(){const o={};SILO_NAMES.forEach(s=>o[s]=1);return o;}
+const customW={};ALL_NAMES.forEach(s=>customW[s]=1);
+function activeNames(){return includeSample?ALL_NAMES:SEASON_NAMES;}
+function balanced(){const o={};ALL_NAMES.forEach(s=>o[s]=1);return o;}
 function siloWeights(d){return scoreMode==='role'?(POSITION_WEIGHTS[d.position_group]||balanced()):customW;}
 function overallScore(d){const w=siloWeights(d);let num=0,den=0;
-  SILO_NAMES.forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
-function siloContribs(d){const w=siloWeights(d);const present=SILO_NAMES.filter(s=>d['silo__'+s]!=null);
+  activeNames().forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
+function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>d['silo__'+s]!=null);
   const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*d['silo__'+s]);return o;}
 const LB_MODES={
   'By position':null,
-  'Balanced':{Pace:1,Physical:1,Passing:1,Creation:1,Movement:1},
-  'Athlete':{Pace:3,Physical:3,Passing:1,Creation:1,Movement:1},
-  'Creator':{Pace:1,Physical:1,Passing:2,Creation:3,Movement:2},
-  'Engine':{Pace:2,Physical:3,Passing:1,Creation:1,Movement:2},
-  'Poacher':{Pace:2,Physical:1,Passing:0.5,Creation:2,Movement:3},
+  'Balanced':{Pace:1,Physical:1,Passing:1,Creation:1,Movement:1,Shooting:1,Defending:1,Dribbling:1},
+  'Athlete':{Pace:3,Physical:3,Passing:1,Creation:1,Movement:1,Shooting:1,Defending:1,Dribbling:1},
+  'Creator':{Pace:1,Physical:1,Passing:2,Creation:3,Movement:2,Shooting:1,Defending:0.5,Dribbling:2},
+  'Engine':{Pace:2,Physical:3,Passing:1,Creation:1,Movement:2,Shooting:0.5,Defending:2,Dribbling:1},
+  'Poacher':{Pace:2,Physical:1,Passing:0.5,Creation:2,Movement:3,Shooting:3,Defending:0.3,Dribbling:1},
 };
 let lbLimit=15;
 function renderLeaderboard(){
+  const names=activeNames();
   const elig=DATA.filter(d=>state.positions.has(d.position_group)&&d.matches>=state.minMatches
-    &&SILO_NAMES.every(s=>d['silo__'+s]!=null));
+    &&names.every(s=>d['silo__'+s]!=null));
   elig.forEach(d=>d._score=overallScore(d));
   elig.sort((a,b)=>b._score-a._score);
   const box=document.getElementById('leaderboard');box.innerHTML='';
   box.appendChild(el('div',{class:'lb-row head'},[
     el('div',{class:'lb-rank',text:'#'}),el('div',{text:'Player'}),
-    el('div',{text:SILO_NAMES.join(' · ')}),el('div',{class:'lb-score',text:'OVR'})]));
+    el('div',{text:names.join(' · ')}),el('div',{class:'lb-score',text:'OVR'})]));
   const show=elig.slice(0,lbLimit);const maxS=show.length?show[0]._score:100;
   show.forEach((d,i)=>{
     const row=el('div',{class:'lb-row'});
@@ -738,10 +777,10 @@ function renderLeaderboard(){
       el('div',{class:'n',text:d.player_short_name}),
       el('div',{class:'m',text:`${d.position_group} · ${d.team_short} · ${d.matches} matches`})]));
     const bar=el('div',{class:'lb-bar'});const c=siloContribs(d);
-    SILO_NAMES.forEach(s=>{const part=c[s]||0;if(part<=0)return;
+    names.forEach(s=>{const part=c[s]||0;if(part<=0)return;
       const seg=el('div',{class:'lb-seg'});seg.style.width=(part/maxS*100)+'%';seg.style.background=SILO_COLORS[s];
       seg.addEventListener('mouseenter',ev=>showTip(
-        `<b>${d.player_short_name}</b><div class="pos">${s} silo</div>
+        `<b>${d.player_short_name}</b><div class="pos">${s} silo${SAMPLE_NAMES.includes(s)?' · 10-match':''}</div>
          <div class="row"><span>Silo score</span><b>${fmt(d['silo__'+s],0)}</b></div>
          <div class="row"><span>Contribution</span><b>${fmt(c[s],1)}</b></div>`,ev));
       seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);bar.appendChild(seg);});
@@ -757,40 +796,54 @@ function renderLeaderboard(){
   if(lbLimit>15){const b=el('button',{class:'toolbtn',text:'Show less',style:'margin-left:8px'});
     b.onclick=()=>{lbLimit=15;renderLeaderboard();};more.appendChild(b);}
   box.appendChild(more);
-  const sumW=SILO_NAMES.reduce((a,s)=>a+customW[s],0)||1;
-  SILO_NAMES.forEach(s=>{const pc=document.getElementById('wpc-'+s);if(pc)pc.textContent=Math.round(customW[s]/sumW*100)+'%';});
+  const en=document.getElementById('lbElig');
+  if(en)en.textContent=includeSample
+    ?`Ranking ${elig.length} players in the 10-match sample (all 8 silos present).`
+    :`Ranking ${elig.length} players (all 60+ min).`;
+  const sumW=names.reduce((a,s)=>a+customW[s],0)||1;
+  names.forEach(s=>{const pc=document.getElementById('wpc-'+s);if(pc)pc.textContent=Math.round(customW[s]/sumW*100)+'%';});
+}
+function refreshWeightUI(){
+  ALL_NAMES.forEach(s=>{const ctl=document.getElementById('wctl-'+s);
+    if(ctl)ctl.style.display=(includeSample||SEASON_NAMES.includes(s))?'':'none';});
+  document.getElementById('lbLegend').innerHTML=activeNames().map(s=>
+    `<span class="item"><span class="swatch" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}</span>`).join('')
+    +`<span class="item" style="color:var(--muted)">${includeSample?'* 10-match sample · ':''}bar = weighted contribution</span>`;
 }
 (function buildScoreUI(){
   const modes=document.getElementById('lbModes');
   modes.appendChild(el('span',{class:'lab',text:'Weighting'}));
   Object.keys(LB_MODES).forEach(name=>{
-    const c=el('button',{class:'chip',text:name,'aria-pressed':name==='By position'});
+    const c=el('button',{class:'chip mode',text:name,'aria-pressed':name==='By position'});
     c.onclick=()=>{
-      [...modes.querySelectorAll('.chip')].forEach(x=>x.setAttribute('aria-pressed',x===c));
+      [...modes.querySelectorAll('.chip.mode')].forEach(x=>x.setAttribute('aria-pressed',x===c));
       if(LB_MODES[name]===null){scoreMode='role';}
-      else{scoreMode='custom';SILO_NAMES.forEach(s=>{customW[s]=LB_MODES[name][s];
-        document.getElementById('w-'+s).value=LB_MODES[name][s]*20;});}
+      else{scoreMode='custom';ALL_NAMES.forEach(s=>{customW[s]=LB_MODES[name][s]??1;
+        const sl=document.getElementById('w-'+s);if(sl)sl.value=(LB_MODES[name][s]??1)*20;});}
       document.getElementById('weights').classList.toggle('dim',scoreMode==='role');
       renderLeaderboard();
     };
     modes.appendChild(c);
   });
+  const tog=el('button',{class:'chip toggle',html:'+ Shooting · Defending · Dribbling <span style="opacity:.7">(10-match)</span>','aria-pressed':'false'});
+  tog.onclick=()=>{includeSample=!includeSample;tog.setAttribute('aria-pressed',includeSample);
+    lbLimit=15;refreshWeightUI();renderLeaderboard();renderRadar();
+    document.getElementById('lbNote').style.display=includeSample?'none':'';};
+  modes.appendChild(tog);
   const box=document.getElementById('weights');
-  SILO_NAMES.forEach(s=>{
-    const ctl=el('div',{class:'wctl'});
+  ALL_NAMES.forEach(s=>{
+    const ctl=el('div',{class:'wctl',id:'wctl-'+s});
     ctl.appendChild(el('div',{class:'top'},[
-      el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}`}),
+      el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}`}),
       el('span',{class:'pc',id:'wpc-'+s})]));
     const r=el('input',{type:'range',min:'0',max:'100',value:'20',step:'5',id:'w-'+s});
     r.oninput=()=>{customW[s]=(+r.value/20)||0.0001;scoreMode='custom';
-      [...document.querySelectorAll('#lbModes .chip')].forEach(x=>x.setAttribute('aria-pressed',false));
+      [...document.querySelectorAll('#lbModes .chip.mode')].forEach(x=>x.setAttribute('aria-pressed',false));
       document.getElementById('weights').classList.remove('dim');renderLeaderboard();};
     ctl.appendChild(r);box.appendChild(ctl);
   });
-  box.classList.add('dim');  // start in role-based mode
-  document.getElementById('lbLegend').innerHTML=SILO_NAMES.map(s=>
-    `<span class="item"><span class="swatch" style="background:${SILO_COLORS[s]}"></span>${s}</span>`).join('')
-    +`<span class="item" style="color:var(--muted)">bar = position-weighted contribution</span>`;
+  box.classList.add('dim');  // start role-based
+  refreshWeightUI();
 })();
 
 // ---------- SHOOTING (10-match sample) ----------
@@ -830,8 +883,61 @@ function renderShooting(){
      <span class="item" style="color:var(--muted)">click a player for their profile</span>`;
 }
 
+// ---------- COMPARE RADAR ----------
+(function buildRadarPickers(){
+  const A=document.getElementById('radarA'),B=document.getElementById('radarB');
+  const sorted=[...DATA].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  sorted.forEach(d=>{A.appendChild(el('option',{value:d.player_id,text:`${d.player_name} — ${d.team_short}`}));
+    B.appendChild(el('option',{value:d.player_id,text:`${d.player_name} — ${d.team_short}`}));});
+  // defaults: a wide attacker vs a central defender if possible
+  const wa=DATA.find(d=>d.position_group==='Wide Attacker'&&d.shot);
+  const cd=DATA.find(d=>d.position_group==='Central Defender'&&d.shot);
+  A.value=(wa||DATA[0]).player_id;B.value=(cd||DATA[1]).player_id;
+  A.onchange=renderRadar;B.onchange=renderRadar;
+})();
+function renderRadar(){
+  const names=activeNames();
+  const A=DATA.find(d=>d.player_id===+document.getElementById('radarA').value);
+  const B=DATA.find(d=>d.player_id===+document.getElementById('radarB').value);
+  const svg=document.getElementById('radar');svg.textContent='';
+  const W=Math.min(svg.parentElement.clientWidth||460,520),H=W,cx=W/2,cy=H/2,R=W*0.30;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const n=names.length,ang=i=>-Math.PI/2+i*2*Math.PI/n;
+  const pt=(i,r)=>[cx+Math.cos(ang(i))*r*R/100,cy+Math.sin(ang(i))*r*R/100];
+  // rings
+  [25,50,75,100].forEach(rr=>{
+    let pts=names.map((_,i)=>pt(i,rr).map(v=>v.toFixed(1)).join(',')).join(' ');
+    svg.appendChild(S('polygon',{points:pts,fill:'none',stroke:'var(--grid)','stroke-width':1}));
+  });
+  names.forEach((s,i)=>{
+    const [x,y]=pt(i,100);
+    svg.appendChild(S('line',{x1:cx,y1:cy,x2:x.toFixed(1),y2:y.toFixed(1),stroke:'var(--grid)','stroke-width':1}));
+    const [lx,ly]=pt(i,116);
+    svg.appendChild(S('text',{x:lx.toFixed(1),y:ly.toFixed(1),'text-anchor':Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end'),
+      'dominant-baseline':'middle',class:'axis',style:`fill:${SILO_COLORS[s]};font-weight:700;font-size:10px`,text:s.toUpperCase()}));
+  });
+  [[A,'var(--c1)'],[B,'var(--c2)']].forEach(([d,col])=>{
+    if(!d)return;
+    const pts=names.map((s,i)=>{const v=d['silo__'+s];return pt(i,v==null?0:v);});
+    const poly=pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
+    svg.appendChild(S('polygon',{points:poly,fill:col,'fill-opacity':.14,stroke:col,'stroke-width':2.4,'stroke-linejoin':'round'}));
+    pts.forEach((p,i)=>{const v=d['silo__'+names[i]];if(v==null)return;
+      const c=S('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:3.5,fill:col});
+      c.addEventListener('mouseenter',ev=>showTip(`<b>${d.player_short_name}</b><div class="pos">${names[i]}</div>
+        <div class="row"><span>Percentile</span><b>${fmt(v,0)}</b></div>`,ev));
+      c.addEventListener('mousemove',moveTip);c.addEventListener('mouseleave',hideTip);svg.appendChild(c);});
+  });
+  // legend
+  const leg=[[A,'var(--c1)'],[B,'var(--c2)']].filter(([d])=>d).map(([d,col])=>
+    `<span class="item"><span class="swatch" style="background:${col}"></span>${d.player_name} · ${d.position_group}</span>`).join('');
+  let host=document.getElementById('radarLegend');
+  if(!host){host=el('div',{class:'legend',id:'radarLegend',style:'margin-top:10px'});
+    document.querySelector('#compare-section .card').appendChild(host);}
+  host.innerHTML=leg;
+}
+
 // ---------- render all ----------
-function renderAll(){renderLeaderboard();renderShooting();renderAthletic();renderPassing();renderRunMix();}
+function renderAll(){renderLeaderboard();renderShooting();renderRadar();renderAthletic();renderPassing();renderRunMix();}
 renderAll();renderProfile();renderTeams();
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
 </script>

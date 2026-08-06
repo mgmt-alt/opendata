@@ -33,12 +33,24 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
 
-**What the season aggregates leave out:** the all-games aggregate CSVs cover movement
-+ on-ball passing only, so the season score omits **Shooting**, **Dribbling** and
-**Defending**. Those *are* present in the per-match **dynamic events** (shots, carries,
-pressing/regains) — but only for the 10 tracked matches, so they're surfaced separately
-(see *Shooting* below) rather than applied unevenly to a season-wide, all-players ranking.
-There is **no xG** anywhere in the open data.
+**Two scopes.** The five silos above come from the *all-games* aggregates and cover
+every player. The per-match **dynamic events** add three more faces — **Shooting**
+(shots/goals), **Defending** (pressing → regains) and **Dribbling** (carries + carry
+distance) — for the ~155 players in the 10 tracked matches. Flip the dashboard's green
+**+ Shooting · Defending · Dribbling** toggle to switch to the **8-silo full profile**
+(that ranking is limited to sampled players). There is **no xG** anywhere in the open
+data, so Shooting is volume + goals, not finishing quality.
+
+Position weights extend to all eight silos (e.g. a centre-back's Defending is heavily
+weighted, a forward's Shooting). Both rankings export to
+[`season_leaderboard.csv`](season_leaderboard.csv) (5 silos) and
+[`sample_leaderboard.csv`](sample_leaderboard.csv) (8 silos).
+
+![Full-profile leaderboard](../../../assets/viz/leaderboard_full.png)
+
+Compare any two players across the silo axes with the **radar**:
+
+![Radar comparison](../../../assets/viz/radar_compare.png)
 
 **Method:**
 1. Each metric → **percentile within the player's position group**.
@@ -65,10 +77,10 @@ from src.visualization.build_dashboard_data import load_merged
 from src.visualization.player_score import compute_scores, leaderboard
 
 df = load_merged()
-compute_scores(df)                                       # position-aware weights
-compute_scores(df, silo_weights={"Movement": 3, "Creation": 2, "Pace": 2,
-                                 "Physical": 1, "Passing": 1})   # a custom "poacher" lens
-print(leaderboard(df, 20))                               # tidy top-20 with the five faces
+compute_scores(df)                                       # 5 season silos, all players
+compute_scores(df, include_sample=True)                  # 8 silos, 10-match sample only
+compute_scores(df, silo_weights={"Shooting": 3, "Movement": 2})  # custom lens
+print(leaderboard(df, 20, include_sample=True))          # tidy top-20 with all eight faces
 ```
 
 ---
