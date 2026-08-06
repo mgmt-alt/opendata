@@ -18,6 +18,7 @@ This directory contains reusable Python modules for loading, processing, and vis
   - `sectioned_summary_table_viz.py`: Visualisation to compare multiple metrics against different players and organize them by custom categories
   - `build_dashboard_data.py`: Merges the three season-aggregate CSVs into one clean, analysis-ready row-per-player table / JSON
   - `player_score.py`: Computes the **SkillCorner Score** — a FIFA-style, position-relative composite (five silos: Pace, Physical, Passing, Creation, Movement) that ranks players like a leaderboard (see the [walkthrough](visualization/output/README.md#-the-skillcorner-score--a-fifa-style-rating))
+  - `dynamic_events_agg.py`: Aggregates **shooting & finishing** (shots, goals, carries) from the per-match dynamic events — the 10-match sample layer the season aggregates lack
   - `build_dashboard.py`: Assembles the self-contained interactive **Season Explorer** dashboard (`output/season_dashboard.html`)
   - `season_figures.py`: Renders publication-quality static PNG figures (`assets/viz/`) from the season aggregates
   - `output/`: Generated dashboard + a [**README with a full walkthrough**](visualization/output/README.md) of the season visualizations

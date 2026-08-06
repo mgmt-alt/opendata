@@ -156,6 +156,15 @@
   .lb-modes .lab{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:2px}
   .lb-note{font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);
     border-left:3px solid var(--muted);border-radius:8px;padding:9px 12px;margin:14px 0 4px}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--c2);background:color-mix(in srgb,var(--c2) 14%,transparent);
+    border:1px solid color-mix(in srgb,var(--c2) 35%,transparent);border-radius:999px;padding:2px 9px;vertical-align:middle;text-transform:none}
+  .sh-row{display:grid;grid-template-columns:150px 1fr 74px;align-items:center;gap:12px;padding:4px 0}
+  .sh-lab{font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sh-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid)}
+  .sh-seg{height:100%}
+  .sh-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .sh-val .g{color:var(--good);font-weight:700}
+  @media (max-width:560px){.sh-row{grid-template-columns:104px 1fr 64px}}
   .weights.dim{opacity:.4;pointer-events:none}
   .lb-row{display:grid;grid-template-columns:34px minmax(120px,1.4fr) 1fr 44px;align-items:center;gap:12px;
     padding:6px 8px;border-radius:9px;cursor:pointer;transition:background .12s}
@@ -216,14 +225,30 @@
       <div class="legend" id="lbLegend"></div>
       <div id="leaderboard"></div>
       <div class="lb-note" id="lbNote">
-        <strong>What tracking can't see:</strong> this is broadcast tracking data (movement + on-ball passing),
-        so three FIFA faces are <em>not</em> measurable and are deliberately left out —
-        <b>Shooting</b> (no shots/xG per player), <b>Dribbling</b> (no 1v1 events) and
-        <b>Defending</b> (no tackles/interceptions/duels).
+        <strong>Scope:</strong> this season score uses the <em>all-games</em> aggregates, which cover movement &amp;
+        on-ball passing only — so it leaves out <b>Shooting</b>, <b>Dribbling</b> and <b>Defending</b>.
+        Those <em>do</em> exist in the per-match dynamic events (see the Shooting section below), but only for the
+        10 tracked matches, so they're kept out of this season-wide, all-players ranking rather than applied unevenly.
       </div>
       <div class="caption">Eligibility: 3+ matches (use the “Min matches” filter above) and data in all five silos.
         Percentiles use the full positional pool, so a player's standing never depends on the filter.
         Click any row to load that player's profile below.</div>
+    </div>
+  </section>
+
+  <!-- SHOOTING (sample) -->
+  <section id="shooting-section">
+    <div class="sec-head">
+      <h2>Shooting &amp; finishing <span class="badge">10-match sample</span></h2>
+      <p>The season aggregates have no shots — but the per-match <em>dynamic events</em> do (a possession
+        ending in a shot). This covers only the 10 tracked matches (~38% of the roster) and has
+        <strong>no xG</strong>, so it's shot <em>volume &amp; goals</em>, kept separate from the season score above.
+        Filtered by position.</p>
+    </div>
+    <div class="card">
+      <div class="legend" id="shotLegend"></div>
+      <div id="shooting"></div>
+      <div class="caption">“Apps” = tracked matches the player featured in. Goals = shots whose possession led to a goal.</div>
     </div>
   </section>
 
@@ -328,6 +353,10 @@
 const PAYLOAD = __SEASON_DATA__;
 const DATA = PAYLOAD.players;
 const META = PAYLOAD.meta;
+// Shooting from the 10-match dynamic-events sample (keyed by player_id). Not
+// season-wide, no xG — kept separate from the season SkillCorner Score.
+const SAMPLE_SHOOTING = __SAMPLE_SHOOTING__;
+DATA.forEach(d=>{d.shot=SAMPLE_SHOOTING[d.player_id]||null;});
 const RUN_FAMILIES = META.run_families;
 const RUN_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
 const SVGNS='http://www.w3.org/2000/svg';
@@ -539,7 +568,19 @@ function renderProfile(){
       el('div',{class:'fv',text:v==null?'—':Math.round(v),style:`color:${SILO_COLORS[s]}`}),
       el('div',{class:'fl',text:s}),bar]));
   });
-  faces.appendChild(el('div',{class:'pf-na',html:`not tracked:<br><b>${UNAVAILABLE.join(' · ')}</b>`}));
+  // Shooting face — a real face from the 10-match sample when available (not in the season OVR)
+  if(d.shot){
+    const v=d.shot.pct;const bar=el('div',{class:'fbar'});const fill=el('i');
+    fill.style.width=v+'%';fill.style.background='var(--good)';bar.appendChild(fill);
+    const face=el('div',{class:'pf-face',style:'border-style:dashed'},[
+      el('div',{class:'fv',text:Math.round(v),style:'color:var(--good)'}),
+      el('div',{class:'fl',html:'Shooting <span style="opacity:.55">*</span>'}),bar]);
+    face.title=`${d.shot.shots} shots · ${d.shot.goals} goals in ${d.shot.apps} tracked matches`;
+    faces.appendChild(face);
+  }
+  const na=d.shot?['Dribbling','Defending']:UNAVAILABLE;
+  faces.appendChild(el('div',{class:'pf-na',html:
+    `${d.shot?'*10-match sample · ':''}not in score:<br><b>${na.join(' · ')}</b>`}));
   // percentile detail
   const box=document.getElementById('profile');box.innerHTML='';
   PF_METRICS.forEach(([grp,metrics])=>{
@@ -752,8 +793,45 @@ function renderLeaderboard(){
     +`<span class="item" style="color:var(--muted)">bar = position-weighted contribution</span>`;
 })();
 
+// ---------- SHOOTING (10-match sample) ----------
+(function shotPercentiles(){
+  const s=DATA.filter(d=>d.shot);const vals=s.map(d=>d.shot.shots_per_app).sort((a,b)=>a-b);
+  s.forEach(d=>{const v=d.shot.shots_per_app;let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);
+    d.shot.pct=((lo+hi)/2+1)/vals.length*100;});
+})();
+function renderShooting(){
+  const rows=DATA.filter(d=>d.shot&&state.positions.has(d.position_group))
+    .sort((a,b)=>b.shot.shots-a.shot.shots||b.shot.goals-a.shot.goals).slice(0,16);
+  const box=document.getElementById('shooting');box.innerHTML='';
+  if(!rows.length){box.appendChild(el('div',{class:'caption',text:'No sampled shooters in this position filter.'}));return;}
+  const max=rows[0].shot.shots;
+  rows.forEach(d=>{
+    const sh=d.shot;const row=el('div',{class:'sh-row'});
+    row.appendChild(el('div',{class:'sh-lab',text:d.player_short_name}));
+    const bar=el('div',{class:'sh-bar'});
+    const tip=ev=>showTip(`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short} · ${sh.apps} apps</div>
+      <div class="row"><span>Shots</span><b>${sh.shots}</b></div>
+      <div class="row"><span>Goals</span><b>${sh.goals}</b></div>
+      <div class="row"><span>Shots / app</span><b>${fmt(sh.shots_per_app)}</b></div>`,ev);
+    const ng=sh.shots-sh.goals;
+    if(ng>0){const s1=el('div',{class:'sh-seg'});s1.style.width=(ng/max*100)+'%';s1.style.background='var(--c1)';
+      s1.addEventListener('mouseenter',tip);s1.addEventListener('mousemove',moveTip);s1.addEventListener('mouseleave',hideTip);bar.appendChild(s1);}
+    if(sh.goals>0){const s2=el('div',{class:'sh-seg'});s2.style.width=(sh.goals/max*100)+'%';s2.style.background='var(--good)';
+      s2.addEventListener('mouseenter',tip);s2.addEventListener('mousemove',moveTip);s2.addEventListener('mouseleave',hideTip);bar.appendChild(s2);}
+    row.appendChild(bar);
+    row.appendChild(el('div',{class:'sh-val',html:`${sh.shots}${sh.goals?` · <span class="g">${sh.goals}G</span>`:''}`}));
+    row.onclick=()=>{document.getElementById('playerSelect').value=d.player_id;renderProfile();
+      document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});};
+    box.appendChild(row);
+  });
+  document.getElementById('shotLegend').innerHTML=
+    `<span class="item"><span class="swatch" style="background:var(--c1)"></span>Shots</span>
+     <span class="item"><span class="swatch" style="background:var(--good)"></span>Goals</span>
+     <span class="item" style="color:var(--muted)">click a player for their profile</span>`;
+}
+
 // ---------- render all ----------
-function renderAll(){renderLeaderboard();renderAthletic();renderPassing();renderRunMix();}
+function renderAll(){renderLeaderboard();renderShooting();renderAthletic();renderPassing();renderRunMix();}
 renderAll();renderProfile();renderTeams();
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
 </script>

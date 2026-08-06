@@ -296,6 +296,41 @@ def fig_player_card(df, player_name=None):
     _save(fig, "player_card.png")
 
 
+def fig_shooting(n=16):
+    """Top shot-takers from the 10-match dynamic-events sample: total shots split
+    into goals vs non-scoring shots. Explicitly a sample, and xG-free."""
+    from src.visualization.dynamic_events_agg import shooting_table
+    tbl = shooting_table().head(n).iloc[::-1]
+    fig, ax = plt.subplots(figsize=(10.5, 7.5))
+    y = np.arange(len(tbl))
+    non_goal = (tbl["shots"] - tbl["goals"]).to_numpy()
+    goals = tbl["goals"].to_numpy()
+    ax.barh(y, non_goal, height=0.66, color=CAT[0], edgecolor=SURFACE, linewidth=1.0,
+            zorder=3, label="Shots (no goal)")
+    ax.barh(y, goals, left=non_goal, height=0.66, color="#0ca30c", edgecolor=SURFACE,
+            linewidth=1.0, zorder=3, label="Goals")
+    for yi, tot, g in zip(y, tbl["shots"], tbl["goals"]):
+        ax.text(tot + 0.15, yi, f"{int(tot)}" + (f"  ·  {int(g)}G" if g else ""),
+                va="center", ha="left", fontsize=10, fontweight="bold", color=INK)
+    ax.set_yticks(y)
+    ax.set_yticklabels([f"{r.player_name}  ·  {r.team}  ({int(r.sample_apps)} apps)"
+                        for r in tbl.itertuples()], fontsize=9.5, color=INK2)
+    ax.set_xlim(0, tbl["shots"].max() + 2.5)
+    ax.set_xlabel("Shots in the 10-match sample", fontsize=10)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.tick_params(left=False)
+    ax.grid(True, axis="x", color=GRID, linewidth=0.8, zorder=0)
+    ax.set_axisbelow(True)
+    ax.legend(loc="lower right", frameon=False, fontsize=10)
+    ax.set_title("Shooting — the 10-match tracking sample", fontsize=16,
+                 fontweight="bold", color=INK, loc="left", pad=26)
+    ax.text(0, 1.02, "From dynamic-events (possessions ending in a shot) · not season-wide · "
+            "no xG in the open data", transform=ax.transAxes, fontsize=10.5, color=INK2)
+    fig.text(0.99, 0.005, CREDIT, ha="right", fontsize=8, color=MUTED)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    _save(fig, "shooting.png")
+
+
 def _save(fig, name):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / name
@@ -309,6 +344,7 @@ def main():
     print(f"Loaded {len(df)} players. Rendering figures ->")
     fig_leaderboard(df)
     fig_player_card(df)
+    fig_shooting()
     fig_athletic(df)
     fig_passing(df)
     fig_profile(df)

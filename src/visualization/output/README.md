@@ -33,9 +33,12 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
 
-**What tracking can't see — and we don't fake:** **Shooting** (no shots/xG per
-player), **Dribbling** (no 1v1 events), **Defending** (no tackles/interceptions/duels).
-This is in-possession + physical data only.
+**What the season aggregates leave out:** the all-games aggregate CSVs cover movement
++ on-ball passing only, so the season score omits **Shooting**, **Dribbling** and
+**Defending**. Those *are* present in the per-match **dynamic events** (shots, carries,
+pressing/regains) — but only for the 10 tracked matches, so they're surfaced separately
+(see *Shooting* below) rather than applied unevenly to a season-wide, all-players ranking.
+There is **no xG** anywhere in the open data.
 
 **Method:**
 1. Each metric → **percentile within the player's position group**.
@@ -69,6 +72,17 @@ print(leaderboard(df, 20))                               # tidy top-20 with the 
 ```
 
 ---
+
+## Shooting & finishing — the 10-match sample
+
+The season aggregates carry no shots, but the per-match dynamic events do: a player
+possession ending in a shot is a shot, and `lead_to_goal` flags the ones that produced a
+goal. `dynamic_events_agg.py` aggregates these across the **10 tracked matches** (226
+shots, 26 goals, 104 shooters). It is a **sample** (~38% of the roster) with **no xG**,
+so it is kept out of the season score and shown on its own — as a section in the
+dashboard and a `Shooting*` face on each sampled player's card.
+
+![Shooting sample](../../../assets/viz/shooting.png)
 
 ## The athletic map — speed vs work rate
 
@@ -113,6 +127,9 @@ python -m src.visualization.season_figures        # -> assets/viz/*.png
 
 # (optional) export just the ranked leaderboard CSV
 python -m src.visualization.player_score          # -> output/season_leaderboard.csv
+
+# (optional) shooting from the 10-match dynamic events
+python -m src.visualization.dynamic_events_agg    # -> output/sample_shooting.json
 ```
 
 ## Design notes
