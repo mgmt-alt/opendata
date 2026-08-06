@@ -68,6 +68,13 @@
     background:var(--surface);color:var(--ink-2);cursor:pointer;user-select:none;transition:.12s}
   .chip[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
   .chip:hover{border-color:var(--series-1)}
+  /* per-graph Players/Teams segmented toggle */
+  .vseg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:0 0 auto}
+  .vseg .lab{padding:0 8px;align-self:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;background:var(--surface)}
+  .vseg button{font:inherit;font-size:12.5px;padding:4px 12px;border:none;border-left:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer}
+  .vseg button[aria-pressed="true"]{background:var(--series-1);color:#fff}
+  .vmount{margin-bottom:10px}
   select,input[type=search]{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;
     border:1px solid var(--border);background:var(--surface);color:var(--ink);max-width:100%}
   #playerSelect{max-width:min(100%,340px);text-overflow:ellipsis}
@@ -220,11 +227,9 @@
   <div class="kpis" id="kpis"></div>
 
   <div class="filters">
-    <span class="lab">View</span>
-    <div class="chips" id="viewChips"></div>
-    <span class="lab" id="posLab">Position</span>
+    <span class="lab">Position</span>
     <div class="chips" id="posChips"></div>
-    <span class="lab" id="minLab" style="margin-left:auto">Min matches</span>
+    <span class="lab" style="margin-left:auto">Min matches</span>
     <input id="minMatches" type="range" min="1" max="20" value="3" style="width:120px">
     <span id="minMatchesV" style="font-size:13px;color:var(--ink-2);width:2ch">3</span>
   </div>
@@ -242,6 +247,7 @@
         players who feature in them.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-lb"></div>
       <div class="lb-modes" id="lbModes"></div>
       <div class="weights" id="weights"></div>
       <div class="legend" id="lbLegend"></div>
@@ -268,6 +274,7 @@
         Filtered by position.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-shoot"></div>
       <div class="legend" id="shotLegend"></div>
       <div id="shooting"></div>
       <div class="caption">“Apps” = tracked matches the player featured in. Goals = shots whose possession led to a goal.</div>
@@ -282,6 +289,7 @@
         both fast and relentless. Filter by position above; hover any dot for detail.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-ath"></div>
       <div class="toolrow">
         <div class="legend" id="scatterLegend"></div>
         <button class="toolbtn" data-table="athletic" aria-pressed="false">Table</button>
@@ -300,6 +308,7 @@
         expected given pass difficulty (blue) or <em>fewer</em> (red) — SkillCorner's xPass model sets the bar.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-pass"></div>
       <div class="toolrow">
         <div class="legend" id="passLegend"></div>
         <button class="toolbtn" data-table="passing" aria-pressed="false">Table</button>
@@ -326,6 +335,7 @@
         </div>
         <span id="peerCount" style="font-size:12.5px;color:var(--muted)"></span>
       </div>
+      <div class="vmount" id="view-profile"></div>
       <div class="pf-head" id="pfHead"></div>
       <div class="pf-faces" id="pfFaces"></div>
       <div class="profile-grid" id="profile"></div>
@@ -340,6 +350,7 @@
         leaderboard above to add the Shooting / Defending / Dribbling axes.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-radar"></div>
       <div class="radar-wrap">
         <div class="radar-controls">
           <div class="radar-pick"><span class="sw" style="background:var(--c1)"></span><select id="radarA"></select></div>
@@ -359,6 +370,7 @@
         across six movement families. Filtered by position.</p>
     </div>
     <div class="card">
+      <div class="vmount" id="view-run"></div>
       <div class="legend" id="runLegend"></div>
       <div id="runMix"></div>
     </div>
@@ -486,8 +498,8 @@ function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip}){
 
 // ---------- ATHLETIC ----------
 function renderAthletic(){
-  const rows=pool().filter(d=>d.top_speed!=null&&d.m_per_min!=null);
-  const top=viewMode==='teams'?rows:[...rows].sort((a,b)=>(b.top_speed+b.m_per_min/10)-(a.top_speed+a.m_per_min/10)).slice(0,6);
+  const rows=poolFor('ath').filter(d=>d.top_speed!=null&&d.m_per_min!=null);
+  const top=SECVIEW.ath==='teams'?rows:[...rows].sort((a,b)=>(b.top_speed+b.m_per_min/10)-(a.top_speed+a.m_per_min/10)).slice(0,6);
   scatter('athletic',rows,{
     x:d=>d.top_speed,y:d=>d.m_per_min,
     xlab:'Peak sprint speed (km/h) →',ylab:'Work rate (m / min) →',
@@ -516,8 +528,8 @@ function passColor(over){ // diverging blue(+) <-> red(-)
             :`color-mix(in srgb, var(--neg) ${Math.round(35-t*65)}%, var(--mid))`;
 }
 function renderPassing(){
-  const rows=pool().filter(d=>d.pass_vol!=null&&d.pass_pct!=null);
-  const top=viewMode==='teams'?rows:[...rows].sort((a,b)=>b.pass_vol-a.pass_vol).slice(0,5)
+  const rows=poolFor('pass').filter(d=>d.pass_vol!=null&&d.pass_pct!=null);
+  const top=SECVIEW.pass==='teams'?rows:[...rows].sort((a,b)=>b.pass_vol-a.pass_vol).slice(0,5)
     .concat([...rows].sort((a,b)=>b.pass_over-a.pass_over).slice(0,3));
   scatter('passing',rows,{
     x:d=>d.pass_vol,y:d=>d.pass_pct,
@@ -573,7 +585,7 @@ const PF_METRICS=[
 function pct(arr,v){if(v==null)return null;const vals=arr.filter(x=>x!=null).sort((a,b)=>a-b);
   if(!vals.length)return null;let c=0;for(const x of vals)if(x<=v)c++;return Math.round(100*c/vals.length);}
 function renderProfile(){
-  const team=viewMode==='teams';
+  const team=SECVIEW.profile==='teams';
   const sel=document.getElementById('playerSelect');
   const universe=team?teamEntities():DATA;
   const d=universe.find(p=>String(p.player_id)===String(sel.value))||universe[0];if(!d)return;
@@ -629,7 +641,7 @@ function renderProfile(){
 function buildProfileOptions(){
   const sel=document.getElementById('playerSelect');const dl=document.getElementById('playerList');
   sel.innerHTML='';dl.innerHTML='';
-  const team=viewMode==='teams';
+  const team=SECVIEW.profile==='teams';
   const universe=team?teamEntities():DATA;
   const sorted=[...universe].sort((a,b)=>a.player_name.localeCompare(b.player_name));
   sorted.forEach(d=>{sel.appendChild(el('option',{value:d.player_id,text:team?d.player_name:`${d.player_name} — ${d.team_short}`}));
@@ -644,7 +656,7 @@ function initProfile(){
   buildProfileOptions();
   document.getElementById('playerSelect').onchange=renderProfile;
   document.getElementById('playerSearch').addEventListener('change',e=>{
-    const universe=viewMode==='teams'?teamEntities():DATA;
+    const universe=SECVIEW.profile==='teams'?teamEntities():DATA;
     const m=universe.find(d=>d.player_name.toLowerCase()===e.target.value.toLowerCase());
     if(m){document.getElementById('playerSelect').value=m.player_id;renderProfile();}});
 }
@@ -653,7 +665,8 @@ function initProfile(){
 // A team entity mirrors a player record's field names (minutes-weighted means of the rate
 // metrics + silo scores, summed shooting counts), so every graph can render teams by just
 // swapping its data source from filtered() to teamEntities() via pool().
-let viewMode='players';
+// Per-graph view state — each graph is independently Players or Teams.
+const SECVIEW={lb:'players',ath:'players',pass:'players',shoot:'players',run:'players',profile:'players',radar:'players'};
 let TEAMS=null;
 const TEAM_RATE=['top_speed','m_per_min','distance','sprints','hi_count','high_accel','high_decel','hsr_dist','expl_sprint',
   'pass_vol','pass_pct','pass_over','xpass','linebreaks','dangerous_passes','pass_dist','pass_torun','pass_shot','pass_goal',
@@ -679,30 +692,33 @@ function teamEntities(){
   return TEAMS;
 }
 function wmean_pos(ps,w){let n=0,dn=0;ps.forEach(p=>{const v=positionOverall(p);if(v!=null){n+=w(p)*v;dn+=w(p);}});return dn?n/dn:null;}
-function pool(){return viewMode==='teams'?teamEntities():filtered();}
+function poolFor(key){return SECVIEW[key]==='teams'?teamEntities():filtered();}
 function entLabel(d){return d.isTeam?`${d.players} players`:`${d.position_group} · ${d.team_short} · ${d.matches} matches`;}
-
-(function buildViewToggle(){
-  const box=document.getElementById('viewChips');
-  [['players','Players'],['teams','Teams']].forEach(([m,lab],i)=>{
-    const c=el('button',{class:'chip',text:lab,'aria-pressed':i===0});
-    c.onclick=()=>{if(viewMode===m)return;viewMode=m;
-      [...box.children].forEach(x=>x.setAttribute('aria-pressed',x===c));applyView();};
-    box.appendChild(c);});
-})();
-function applyView(){
-  const team=viewMode==='teams';
-  ['posLab','posChips','minLab','minMatches','minMatchesV'].forEach(id=>{
-    const e=document.getElementById(id);if(e)e.style.display=team?'none':'';});
-  lbLimit=15;
-  buildProfileOptions();
-  fillRadarPickers();
-  renderAll();renderProfile();
+// Build a small Players/Teams segmented control in each graph's mount, wired to a re-render.
+function mountViewToggle(mountId,key,rerender){
+  const host=document.getElementById(mountId);if(!host)return;
+  const seg=el('div',{class:'vseg'});seg.appendChild(el('span',{class:'lab',text:'View'}));
+  [['players','Players'],['teams','Teams']].forEach(([m,lab])=>{
+    const btn=el('button',{text:lab,'aria-pressed':String(SECVIEW[key]===m)});
+    btn.onclick=()=>{if(SECVIEW[key]===m)return;SECVIEW[key]=m;
+      [...seg.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===btn));rerender();};
+    seg.appendChild(btn);
+  });
+  host.appendChild(seg);
+}
+function initViewToggles(){
+  mountViewToggle('view-lb','lb',()=>{lbLimit=15;renderLeaderboard();});
+  mountViewToggle('view-ath','ath',renderAthletic);
+  mountViewToggle('view-pass','pass',renderPassing);
+  mountViewToggle('view-shoot','shoot',renderShooting);
+  mountViewToggle('view-run','run',renderRunMix);
+  mountViewToggle('view-profile','profile',()=>{buildProfileOptions();renderProfile();});
+  mountViewToggle('view-radar','radar',()=>{fillRadarPickers();renderRadar();});
 }
 
 // ---------- RUN MIX ----------
 function renderRunMix(){
-  const rows=pool().filter(d=>d.runs!=null).sort((a,b)=>b.runs-a.runs).slice(0,viewMode==='teams'?13:14);
+  const rows=poolFor('run').filter(d=>d.runs!=null).sort((a,b)=>b.runs-a.runs).slice(0,SECVIEW.run==='teams'?13:14);
   const keys=RUN_FAMILIES.map(f=>'run__'+f);
   const box=document.getElementById('runMix');box.innerHTML='';
   rows.forEach(d=>{
@@ -812,8 +828,8 @@ const LB_MODES={
 };
 let lbLimit=15;
 function renderLeaderboard(){
-  const names=activeNames();const team=viewMode==='teams';
-  const elig=pool().filter(d=>names.every(s=>d['silo__'+s]!=null));
+  const names=activeNames();const team=SECVIEW.lb==='teams';
+  const elig=poolFor('lb').filter(d=>names.every(s=>d['silo__'+s]!=null));
   elig.forEach(d=>d._score=overallScore(d));
   elig.sort((a,b)=>b._score-a._score);
   const box=document.getElementById('leaderboard');box.innerHTML='';
@@ -902,8 +918,8 @@ function refreshWeightUI(){
     d.shot.pct=((lo+hi)/2+1)/vals.length*100;});
 })();
 function renderShooting(){
-  const rows=pool().filter(d=>d.shot)
-    .sort((a,b)=>b.shot.shots-a.shot.shots||b.shot.goals-a.shot.goals).slice(0,viewMode==='teams'?13:16);
+  const rows=poolFor('shoot').filter(d=>d.shot)
+    .sort((a,b)=>b.shot.shots-a.shot.shots||b.shot.goals-a.shot.goals).slice(0,SECVIEW.shoot==='teams'?13:16);
   const box=document.getElementById('shooting');box.innerHTML='';
   if(!rows.length){box.appendChild(el('div',{class:'caption',text:'No sampled shooters in this filter.'}));return;}
   const max=rows[0].shot.shots;
@@ -935,7 +951,7 @@ function renderShooting(){
 // ---------- COMPARE RADAR (follows the global Players/Teams view) ----------
 function fillRadarPickers(){
   const A=document.getElementById('radarA'),B=document.getElementById('radarB');A.innerHTML='';B.innerHTML='';
-  const team=viewMode==='teams';const universe=team?teamEntities():DATA;
+  const team=SECVIEW.radar==='teams';const universe=team?teamEntities():DATA;
   [...universe].sort((a,b)=>a.player_name.localeCompare(b.player_name)).forEach(d=>{
     const txt=team?d.player_name:`${d.player_name} — ${d.team_short}`;
     A.appendChild(el('option',{value:d.player_id,text:txt}));B.appendChild(el('option',{value:d.player_id,text:txt}));});
@@ -946,7 +962,7 @@ function fillRadarPickers(){
 }
 function radarEntity(sel){
   const v=document.getElementById(sel).value;
-  const universe=viewMode==='teams'?teamEntities():DATA;
+  const universe=SECVIEW.radar==='teams'?teamEntities():DATA;
   const d=universe.find(x=>String(x.player_id)===String(v));
   return d?{label:d.player_name,sub:d.isTeam?'team squad':d.position_group,silo:s=>d['silo__'+s]}:null;
 }
@@ -983,7 +999,7 @@ function renderRadar(){
     pts.forEach((p,i)=>{const v=d.silo(names[i]);if(v==null)return;
       const c=S('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:3.5,fill:col});
       c.addEventListener('mouseenter',ev=>showTip(`<b>${d.label}</b><div class="pos">${names[i]}</div>
-        <div class="row"><span>${viewMode==='teams'?'Team silo':'Percentile'}</span><b>${fmt(v,0)}</b></div>`,ev));
+        <div class="row"><span>${SECVIEW.radar==='teams'?'Team silo':'Percentile'}</span><b>${fmt(v,0)}</b></div>`,ev));
       c.addEventListener('mousemove',moveTip);c.addEventListener('mouseleave',hideTip);svg.appendChild(c);});
   });
   // legend
@@ -997,6 +1013,6 @@ function renderRadar(){
 
 // ---------- render all ----------
 function renderAll(){renderLeaderboard();renderShooting();renderRadar();renderAthletic();renderPassing();renderRunMix();}
-initProfile();initRadar();renderAll();renderProfile();
+initProfile();initRadar();initViewToggles();renderAll();renderProfile();
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
 </script>
