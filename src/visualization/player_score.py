@@ -142,18 +142,20 @@ def compute_scores(
     if include_sample:
         sample = load_sample()
         raw = ["shots", "goals", "regains", "pressures", "disruptions", "carries",
-               "progcarries", "takeons", "danger_prevented", "apps"]
+               "progcarries", "takeons", "danger_prevented", "clearances", "apps"]
         out = out.merge(sample[raw], left_on="player_id", right_index=True, how="left")
         # Shooting/Dribbling = VOLUME TOTALS over the tracked matches (sparse events — volume
         # matters, a 2-shot cameo can't rate elite, zero output sits at the floor).
         out["shotval_total"] = out["shots"] + 3 * out["goals"]
         out["dribval_total"] = out["takeons"].astype(float)
-        # Defending = a PER-APPEARANCE rate of ball-winning + danger-prevention (dense events,
-        # so per-app is stable and removes the games-played bias). This reflects stopping play
-        # rather than raw pressing volume, so ball-winning midfielders/full-backs lead it —
-        # not high-pressing forwards, as the old "2·regains + disruptions + 0.5·pressures" total did.
-        out["defval_total"] = (2 * out["regains"] + 2 * out["danger_prevented"]
-                               + out["disruptions"]) / out["apps"].clip(lower=1)
+        # Defending = a PER-APPEARANCE rate weighting LAST-LINE defending: clearances and
+        # danger-prevented (led by centre-backs & full-backs) over raw ball-recovery volume
+        # (led by pressing forwards). Broadcast tracking is possession-centric — regains and
+        # disruptions accrue to high pressers up the pitch, so the earlier volume-of-recoveries
+        # formula ranked forwards as the best defenders. This one puts real defenders on top and,
+        # being per-appearance, carries no games-played bias.
+        out["defval_total"] = (2 * out["clearances"] + 3 * out["danger_prevented"]
+                               + 0.5 * out["regains"]) / out["apps"].clip(lower=1)
 
     # 1) per-metric percentiles. Two consistent bases (never a mash-up):
     #    absolute=False -> WITHIN position (role-fit, the default / position-aware overall)

@@ -33,7 +33,7 @@ card but **only from the faces broadcast tracking data can actually see**.
 | **Creation** | *vision* | dangerous & line-breaking passes, passes into shots/runs |
 | **Movement** | *(FIFA has none)* | dangerous off-ball runs, runs received, runs into shots/box |
 | **Shooting** † | SHO | **shot value** = `shots + 3·goals` (sample volume total) |
-| **Defending** † | DEF | `(2·regains + 2·danger-prevented + disruptions) ÷ appearances` |
+| **Defending** † | DEF | `(2·clearances + 3·danger-prevented + 0.5·regains) ÷ appearances` |
 | **Dribbling** † | DRI | 1v1 **take-ons** — defenders beaten by the dribble (sample total) |
 
 † 10-match sample only (~155 players). **Shooting and Dribbling are volume totals** (those
@@ -70,13 +70,16 @@ secretly dominated by the sample silos. Now a custom mix is coherent.
 
 The **Defending** rebuild matters here too. The old `2·regains + disruptions + 0.5·pressures`
 *total* was dominated by on-ball pressing, which happens high up the pitch — so pressing
-forwards looked like the best defenders (they average ~47 pressures a game to a centre-back's
-~15) and it partly just counted how many tracked games you played. The new formula rewards
-**winning the ball and preventing danger, per appearance**, so ball-winning **midfielders and
-full-backs** top Defending — and a Defending-heavy custom mix surfaces them, as you'd expect.
-(Deep centre-backs are still under-credited: SkillCorner's possession-event model captures
-pressing and ball-recovery, not the positioning, interceptions and aerials that define
-centre-back defending — a genuine limitation of the open data.)
+forwards looked like the best defenders (direct ball-recoveries: 290 for centre-forwards vs 75
+for right centre-backs) and it partly just counted how many tracked games you played. The new
+formula leads with **clearances** and **danger prevented** — the last-line actions centre-backs
+and full-backs dominate (clearances: centre-backs and full-backs 92, forwards 4) — over raw
+ball-recovery volume, all **per appearance**. Now real defenders top it: a Defending-only
+ranking is centre-backs, full-backs and ball-winning midfielders, and a **defence-heavy mix
+stays defender-dominated even with Pace mixed in** (Defending 3 : Pace 1 → full-backs and
+centre-backs, not pressing forwards). Centre-backs remain somewhat under-credited — broadcast
+tracking is possession-centric and has no interception/tackle/aerial events, so a centre-back's
+positional defending is only partly visible — but they now appear where they belong.
 
 **Percentiles use the Weibull plotting position** `rank / (n + 1)`, so the best player in
 a sample sits just under 100 (≈ 99) rather than exactly 100 — a sample's top isn't claimed
@@ -155,9 +158,17 @@ data (`xshot` is populated only on defensive engagements, not on shot events).
 **Why Shooting & Dribbling are volume totals (but Defending is a rate).** Shots and take-ons
 are *sparse* — a player with 4 shots in one tracked game would look like a 4-per-game monster
 as a rate, so those two stay **totals**: a player who "hasn't had many shots" simply has a low
-total, and zero output sits at the floor. Defensive engagements are *dense* (dozens per game),
-so a **per-appearance rate** is stable there and, crucially, strips out the games-played bias
-that would otherwise reward whoever featured in the most tracked matches.
+total, and zero output sits at the floor. Defensive actions are more frequent, so Defending is
+a **per-appearance rate** — stable enough, and it strips out the games-played bias that would
+otherwise reward whoever featured in the most tracked matches.
+
+**On the weighting itself (a fair question):** each silo is a percentile, so it is normalised
+to 0–100 *regardless of how many sub-metrics feed it* — a silo with six metrics does not out-vote
+one with a single composite. Equal weights therefore give roughly equal influence (the silos'
+spreads across the ranked players are comparable). The reason a Pace-plus-Defending mix used to
+look "Pace-dominated" was not the arithmetic — it was that the old Defending ranked the wrong
+players (fast pressers), so adding Pace simply reinforced them. With Defending fixed, a
+defence-weighted mix stays with the defenders.
 
 **Shooting is one composite, not an average of separate shot/goal percentiles** (which
 would let a high-volume non-scorer out-rank a scorer). It is `shots + 3·goals`: shot
@@ -177,8 +188,8 @@ who actually take players on lead. Players who never beat a defender tie at the 
 Dribbling, *Playmaker* = Passing + Creation, *Athlete* = Pace + Physical. A complete
 all-rounder can top the position-weighted **overall**, but can't top an archetype on
 unrelated strengths — e.g. Cáceres (2 shots in the sample) is nowhere near the Poacher list,
-while genuine volume shooters lead it; and Ball-winner now surfaces defensive midfielders and
-full-backs, not high-pressing forwards.
+while genuine volume shooters lead it; and Ball-winner now surfaces centre-backs, full-backs and
+ball-winning midfielders, not high-pressing forwards.
 
 In the position-aware **By position** mode, position weights extend to all eight silos (e.g.
 a centre-back's Defending is heavily weighted, a forward's Shooting) and every silo is

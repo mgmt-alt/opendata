@@ -136,6 +136,7 @@ def sample_table(min_apps: int = 1) -> pd.DataFrame:
     P["is_goal"] = P["is_shot"] & (P["lead_to_goal"] == True)  # noqa: E712
     P["is_shot_box"] = P["is_shot"] & (P["penalty_area_start"] == True)  # noqa: E712
     P["is_shot_head"] = P["is_shot"] & (P["is_header"] == True)  # noqa: E712
+    P["is_clear"] = P["end_type"].astype(str).eq("clearance")   # a defensive clearance
     P["is_carry"] = P["carry"] == True  # noqa: E712
     P["carry_dist"] = P["distance_covered"].where(P["is_carry"], 0.0)
     P["is_progcarry"] = P["is_carry"] & (P["distance_covered"] >= PROG_CARRY_M)
@@ -156,6 +157,7 @@ def sample_table(min_apps: int = 1) -> pd.DataFrame:
         "goals": g["is_goal"].sum().astype(int),
         "shots_box": g["is_shot_box"].sum().astype(int),
         "shots_head": g["is_shot_head"].sum().astype(int),
+        "clearances": g["is_clear"].sum().astype(int),
         "carries": g["is_carry"].sum().astype(int),
         "carry_dist": g["carry_dist"].sum().round(0),
         "progcarries": g["is_progcarry"].sum().astype(int),
@@ -216,7 +218,7 @@ def load_sample() -> pd.DataFrame:
 # Extra per-player counts/rates carried into the dashboard for the drill-down, scatter
 # explorer and enriched charts (on top of the originals the score depends on).
 SAMPLE_EXTRA_INT = [
-    "shots_box", "shots_head", "opp_bypassed", "opp_overtaken",
+    "shots_box", "shots_head", "clearances", "opp_bypassed", "opp_overtaken",
     "danger_stopped", "danger_reduced", "force_back", "beaten_mov", "danger_prevented",
 ]
 SAMPLE_EXTRA_FLOAT = [

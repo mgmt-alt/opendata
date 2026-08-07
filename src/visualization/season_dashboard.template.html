@@ -927,12 +927,14 @@ const POSITION_WEIGHTS={
 };
 // build the composite sample scores on each player (null when not in the sample).
 // Shooting/Dribbling are VOLUME TOTALS (sparse events — volume matters, a cameo rate can't
-// top them, zero output sits at the floor). Defending is a PER-APPEARANCE rate of
-// ball-winning + danger-prevention (dense events, so per-app is stable) — this reflects
-// stopping play rather than pressing volume, and removes the games-played bias.
+// top them, zero output sits at the floor). Defending is a PER-APPEARANCE rate that weights
+// last-line defending — CLEARANCES and DANGER PREVENTED (which centre-backs & full-backs
+// lead) over raw ball-recovery volume (which pressing forwards lead). This is why real
+// defenders — centre-backs, full-backs, ball-winning midfielders — top Defending, and it
+// removes the games-played bias a raw total carries.
 DATA.forEach(d=>{const sh=d.shot;
   d.shotval_total = sh?sh.shots + 3*sh.goals:null;
-  d.defval_total  = sh?(2*sh.regains + 2*(sh.danger_prevented||0) + sh.disruptions)/(sh.apps||1):null;
+  d.defval_total  = sh?(2*(sh.clearances||0) + 3*(sh.danger_prevented||0) + 0.5*sh.regains)/(sh.apps||1):null;
   d.dribval_total = sh?sh.takeons:null;   // 1v1 take-ons (defenders beaten), not raw carries
 });
 // Weibull percentile rank/(n+1): the sample's best sits just under 100 (not exactly 100),
