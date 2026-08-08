@@ -159,21 +159,19 @@
   .stab:hover{border-color:var(--tabc,var(--series-1))}
   .stab.active{background:var(--tabc,var(--series-1));border-color:var(--tabc,var(--series-1));color:#fff}
   .stab.samp{border-style:dashed}
-  /* silo drill-down: dropdown + one big metric distribution */
-  .drill-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-  .drill-silo{font-size:14px;color:var(--ink-2)}
-  .drill-pick{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);
-    text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-  .drill-select{font:inherit;font-size:13.5px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);
-    background:var(--surface);color:var(--ink);max-width:100%}
-  .bigmc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-  .bigmc-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .bigmc-lab{font-size:15px;font-weight:700;color:var(--ink)}
-  .bigmc-nums{display:flex;align-items:baseline;gap:14px}
-  .bigmc-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-  .bigmc-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
-  .bigmc-hist{display:block;width:100%;height:120px;margin:8px 0 4px}
-  .bigmc-foot{font-size:12px;color:var(--muted)}
+  /* silo drill-down (player card): deconstruct header + small-multiples metric cards */
+  .dd-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap}
+  .dd-title{font-size:14px;color:var(--ink-2)}
+  .dd-title .dd-score{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:4px}
+  .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 12px}
+  .mc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;min-height:30px}
+  .mc-lab{font-size:12px;color:var(--ink-2);line-height:1.25;font-weight:600}
+  .mc-fig{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 4px}
+  .mc-val{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mc-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mc-hist{display:block;width:100%;height:46px}
+  .mc-foot{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
   .wt{font-size:9.5px;font-weight:800;color:var(--series-1);background:var(--grid);
     border-radius:4px;padding:1px 5px;font-variant-numeric:tabular-nums;flex:0 0 auto}
   /* scatter explorer controls */
@@ -377,12 +375,14 @@
   <section id="explore-section">
     <div class="sec-head">
       <h2>Scatter explorer — find your own nuggets</h2>
-      <p>Plot <strong>any metric against any other</strong> — one dot per player. Pick the axes, and each player is placed
-        individually and coloured by position. Filtered by position above; hover a dot for detail, click it to open that
-        player's card.</p>
+      <p>Plot <strong>any metric against any other</strong> — one dot per player, coloured by position. Pick a
+        <strong>silo tab</strong> to narrow the axis menus to that silo's metrics, then choose the metric for each axis
+        (your picks stick when you switch tabs, so you can cross silos — e.g. Pace on X, Defending on Y). Filtered by
+        position above; hover a dot for detail, click it to open that player's card.</p>
     </div>
     <div class="card">
       <div class="vmount" id="view-explore"></div>
+      <div class="silo-tabs" id="xpTabs"></div>
       <div class="xp-controls">
         <label>X axis<select id="xpX"></select></label>
         <label>Y axis<select id="xpY"></select></label>
@@ -415,7 +415,6 @@
       <div class="vmount" id="view-profile"></div>
       <div class="pf-head" id="pfHead"></div>
       <div class="pf-faces" id="pfFaces"></div>
-      <div class="silo-tabs" id="siloTabs"></div>
       <div class="profile-grid" id="profile"></div>
     </div>
   </section>
@@ -679,8 +678,7 @@ document.querySelectorAll('[data-table]').forEach(b=>{
 });
 
 // ---------- PLAYER PROFILE ----------
-let pfTab='Overview';   // 'Overview' or a silo name — the active silo tab
-let pfMetric=null;      // metric key selected in the silo tab's drill-down dropdown
+let pfSilo=null;        // null = overview of all silos; a silo name = deep-dive drill-down
 let pfUniverse=[];      // current combobox universe (players, or teams in Team view)
 function samplePeers(team){return (team?teamEntities():DATA).filter(x=>x.shot);}
 function currentEntity(){
@@ -699,7 +697,7 @@ function renderProfile(){
   // keep the search box in sync with the selected entity (unless the user is typing in it)
   const inp=document.getElementById('playerSearch');
   if(document.activeElement!==inp)inp.value=comboLabel(d);
-  // FIFA-style faces: canonical OVR + the eight silo faces (clicking opens that silo's tab)
+  // FIFA-style faces: canonical OVR + the eight silo faces (clicking deconstructs that silo)
   const faces=document.getElementById('pfFaces');faces.innerHTML='';
   const ovr=team?d._overall:positionOverall(d);   // always the weighted total, never a single silo
   faces.appendChild(el('div',{class:'pf-ovr'},[
@@ -711,34 +709,24 @@ function renderProfile(){
     const v=d['silo__'+s];const avail=v!=null;
     const bar=el('div',{class:'fbar'});const fill=el('i');
     fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
-    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfTab===s?' active':''),role:'button',tabindex:'0',
-      title:'Open this silo'},[
+    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfSilo===s?' active':''),role:'button',tabindex:'0',
+      title:'Click to deconstruct this silo'},[
       el('div',{class:'fv',text:avail?Math.round(v):'—',style:`color:${avail?SILO_COLORS[s]:'var(--muted)'}`}),
       el('div',{class:'fl',html:s+(sample?' <span style="opacity:.55">*</span>':'')}),bar]);
-    face.onclick=()=>{pfTab=s;pfMetric=null;renderProfile();};
+    face.onclick=()=>{pfSilo=(pfSilo===s?null:s);renderProfile();};
     face.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();face.onclick();}};
     faces.appendChild(face);
   });
   faces.appendChild(el('div',{class:'pf-na',html:
     (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no per-shot xG'}));
-  renderSiloTabs();
-  renderTabContent(d,peers,team);
+  renderProfileDetail(d,peers,team);
 }
-// tab bar: an Overview tab + one tab per silo
-function renderSiloTabs(){
-  const host=document.getElementById('siloTabs');host.innerHTML='';
-  ['Overview',...ALL_NAMES].forEach(t=>{
-    const b=el('button',{class:'stab'+(pfTab===t?' active':''),text:t});
-    if(t!=='Overview'){b.style.setProperty('--tabc',SILO_COLORS[t]);if(SAMPLE_NAMES.includes(t))b.classList.add('samp');}
-    b.onclick=()=>{pfTab=t;pfMetric=null;renderProfile();};
-    host.appendChild(b);
-  });
-}
-function renderTabContent(d,peers,team){
+function renderProfileDetail(d,peers,team){
   const box=document.getElementById('profile');box.innerHTML='';
   const sp=samplePeers(team);
-  if(pfTab==='Overview'){
-    box.appendChild(el('div',{class:'dd-hint',html:'A percentile bar per scoring metric, grouped by silo. Open a silo tab above to drill into any single metric with its full distribution.'}));
+  if(!pfSilo){
+    // OVERVIEW — one compact percentile bar per scoring metric, grouped by silo
+    box.appendChild(el('div',{class:'dd-hint',html:'Percentile vs peers for each scoring metric. <b>Click a silo face above</b> to deconstruct it — its full metric set, each with its own distribution.'}));
     ALL_NAMES.forEach(silo=>{
       const sample=SAMPLE_NAMES.includes(silo);const sv=d['silo__'+silo];
       box.appendChild(el('div',{class:'pf-group'},[
@@ -760,43 +748,34 @@ function renderTabContent(d,peers,team){
     });
     return;
   }
-  // SILO TAB — pick one metric from a dropdown, see its full distribution
-  const silo=pfTab;const sample=SAMPLE_NAMES.includes(silo);const sv=d['silo__'+silo];
-  const mets=METRICS.filter(m=>m.silo===silo).slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
-  if(pfMetric==null||!mets.some(m=>m.key===pfMetric))pfMetric=(mets.find(m=>m.scoring)||mets[0]).key;
-  const sel=el('select',{class:'drill-select',id:'drillMetric'});
-  mets.forEach(m=>sel.appendChild(el('option',{value:m.key,text:m.label+(m.scoring?'  ✓':'')})));
-  sel.value=pfMetric;sel.onchange=()=>{pfMetric=sel.value;renderTabContent(d,peers,team);};
-  box.appendChild(el('div',{class:'drill-head'},[
-    el('div',{class:'drill-silo',html:`<span style="color:${SILO_COLORS[silo]}">■</span> <b>${silo}</b>${sample?' <span class="tag-s">10-match</span>':''} · silo score <b style="color:${SILO_COLORS[silo]}">${sv==null?'—':Math.round(sv)}</b>`}),
-    el('label',{class:'drill-pick'},[el('span',{text:'Metric'}),sel]),
-  ]));
-  const m=METRIC_BY_KEY[pfMetric];
-  box.appendChild(bigMetricDetail(m,d,m.src==='sample'?sp:peers));
-  const w=ALL_SILOS[silo][m.key];
-  box.appendChild(el('div',{class:'caption',text:w?`Feeds the ${silo} score (weight ×${w}).`
-    :(m.scoring?`Feeds the ${silo} score.`:`Context metric — shown for exploration, not part of the ${silo} score.`)}));
+  // DEEP-DIVE — small-multiples grid: one card per metric, each with its own distribution
+  const sample=SAMPLE_NAMES.includes(pfSilo);const scoreSet=ALL_SILOS[pfSilo];const sv=d['silo__'+pfSilo];
+  const head=el('div',{class:'dd-head'},[
+    el('div',{class:'dd-title',html:`<span style="color:${SILO_COLORS[pfSilo]}">■</span> Deconstructing <b style="color:${SILO_COLORS[pfSilo]}">${pfSilo}</b>${sample?' <span class="tag-s">10-match</span>':''} <span class="dd-score" style="color:${SILO_COLORS[pfSilo]}">${sv==null?'—':Math.round(sv)}</span>`}),
+    el('button',{class:'toolbtn',id:'ddAll',text:'← all silos'}),
+  ]);
+  box.appendChild(head);
+  head.querySelector('#ddAll').onclick=()=>{pfSilo=null;renderProfile();};
+  const mets=METRICS.filter(m=>m.silo===pfSilo).slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
+  const grid=el('div',{class:'sm-grid'});box.appendChild(grid);
+  mets.forEach(m=>grid.appendChild(metricCard(m,d,m.src==='sample'?sp:peers,scoreSet&&scoreSet[m.key])));
 }
-// one clear, full-width metric detail: value, percentile, a big distribution with the player marked
-function bigMetricDetail(m,d,peers){
+// a small-multiple card: metric name, the player's value + percentile, and a mini histogram
+function metricCard(m,d,peers,weight){
   const val=metricVal(d,m.key);const p=metricPct(m.key,d,peers);
   const good=p==null?'var(--muted)':(p>=50?'var(--pos)':'var(--neg)');
-  const wrap=el('div',{class:'bigmc'});
-  wrap.appendChild(el('div',{class:'bigmc-top'},[
-    el('div',{class:'bigmc-lab',text:m.label}),
-    el('div',{class:'bigmc-nums'},[
-      el('span',{class:'bigmc-val',text:fmtMetric(m.key,val)}),
-      el('span',{class:'bigmc-pct',text:(p==null?'—':Math.round(p))+' pctl',style:`color:${good}`}),
-    ]),
+  const card=el('div',{class:'mc'});
+  const badge=weight?el('span',{class:'wt',title:`weight ×${weight} in the ${m.silo} score`,text:'×'+weight})
+    :(m.scoring?el('span',{class:'wt',title:`builds the ${m.silo} score`,text:'✓'}):null);
+  card.appendChild(el('div',{class:'mc-top'},[el('span',{class:'mc-lab',text:m.label}),badge]));
+  card.appendChild(el('div',{class:'mc-fig'},[
+    el('span',{class:'mc-val',text:fmtMetric(m.key,val)}),
+    el('span',{class:'mc-pct',text:p==null?'—':Math.round(p),style:`color:${good}`}),
   ]));
-  const svg=S('svg',{class:'bigmc-hist'});wrap.appendChild(svg);
-  miniHist(svg,m,d,peers,val,120);
-  const pv=peers.map(x=>metricVal(x,m.key)).filter(x=>x!=null);
-  const lo=pv.length?Math.min(...pv):null,hi=pv.length?Math.max(...pv):null;
-  const peerLbl=d.isTeam?'teams':(m.src==='sample'?'sampled players':d.position_group+'s');
-  wrap.appendChild(el('div',{class:'bigmc-foot',html:p==null?'no peer data':
-    `<b style="color:${good}">${p>=50?'Top '+Math.round(100-p):'Bottom '+Math.round(p)}%</b> of ${pv.length} ${peerLbl} · peer range ${fmtMetric(m.key,lo)} – ${fmtMetric(m.key,hi)}`}));
-  return wrap;
+  const svg=S('svg',{class:'mc-hist'});card.appendChild(svg);
+  miniHist(svg,m,d,peers,val);
+  card.appendChild(el('div',{class:'mc-foot',text:p==null?'no peer data':`${p>=50?'top':'bottom'} ${p>=50?Math.round(100-p):Math.round(p)}% · pctl ${Math.round(p)}`}));
+  return card;
 }
 // histogram of peer values with the player's value marked; H defaults to a compact 46
 function miniHist(svg,m,d,peers,val,H){
@@ -1267,21 +1246,38 @@ function renderRadar(){
 // ---------- SCATTER EXPLORER (one dot per player) ----------
 const POS_COLOR={'Central Defender':'var(--c2)','Full Back':'var(--c1)','Midfield':'var(--c3)',
   'Wide Attacker':'var(--c5)','Center Forward':'var(--c6)','Team':'var(--c7)'};
+let xpTab='All';                 // silo filter for the axis menus ('All' or a silo name)
+let xpX='top_speed',xpY='takeons';  // current axes (persist across tab switches)
+function renderXpTabs(){
+  const host=document.getElementById('xpTabs');host.innerHTML='';
+  ['All',...ALL_NAMES].forEach(t=>{
+    const b=el('button',{class:'stab'+(xpTab===t?' active':''),text:t});
+    if(t!=='All'){b.style.setProperty('--tabc',SILO_COLORS[t]);if(SAMPLE_NAMES.includes(t))b.classList.add('samp');}
+    b.onclick=()=>{xpTab=t;fillExploreOptions();};
+    host.appendChild(b);
+  });
+}
+function fillAxis(id,key){
+  const sel=document.getElementById(id);sel.innerHTML='';
+  const inTab=xpTab==='All'||METRIC_BY_KEY[key].silo===xpTab;
+  // keep the current axis visible even when it's outside the active silo tab
+  if(!inTab){const cm=METRIC_BY_KEY[key];sel.appendChild(el('option',{value:cm.key,text:cm.label+' — '+cm.silo+' (current)'}));}
+  if(xpTab==='All'){
+    ALL_NAMES.forEach(s=>{const ms=METRICS.filter(m=>m.silo===s);if(!ms.length)return;const og=el('optgroup',{label:s});
+      ms.forEach(m=>og.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));sel.appendChild(og);});
+  }else{
+    METRICS.filter(m=>m.silo===xpTab).forEach(m=>sel.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));
+  }
+  sel.value=key;
+}
 function fillExploreOptions(){
-  const groups={};METRICS.forEach(m=>{(groups[m.silo]??=[]).push(m);});
-  ['xpX','xpY'].forEach(id=>{const sel=document.getElementById(id);const cur=sel.value;sel.innerHTML='';
-    ALL_NAMES.forEach(s=>{if(!groups[s])return;const og=el('optgroup',{label:s});
-      groups[s].forEach(m=>og.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));sel.appendChild(og);});
-    if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;});
+  renderXpTabs();fillAxis('xpX',xpX);fillAxis('xpY',xpY);
 }
 function initExplore(){
   fillExploreOptions();
-  document.getElementById('xpX').value='top_speed';
-  document.getElementById('xpY').value='takeons';
-  document.getElementById('xpX').onchange=renderExplore;
-  document.getElementById('xpY').onchange=renderExplore;
-  document.getElementById('xpSwap').onclick=()=>{const a=document.getElementById('xpX'),b=document.getElementById('xpY');
-    const t=a.value;a.value=b.value;b.value=t;renderExplore();};
+  document.getElementById('xpX').onchange=e=>{xpX=e.target.value;renderExplore();};
+  document.getElementById('xpY').onchange=e=>{xpY=e.target.value;renderExplore();};
+  document.getElementById('xpSwap').onclick=()=>{const t=xpX;xpX=xpY;xpY=t;fillExploreOptions();renderExplore();};
 }
 function openCardFor(d){if(d.isTeam)return;const s=document.getElementById('playerSelect');
   if(![...s.options].some(o=>String(o.value)===String(d.player_id)))return;
@@ -1290,7 +1286,7 @@ function openCardFor(d){if(d.isTeam)return;const s=document.getElementById('play
   buildProfileOptions();selectPlayer(d.player_id);
   document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});}
 function renderExplore(){
-  const xk=document.getElementById('xpX').value,yk=document.getElementById('xpY').value;
+  const xk=xpX,yk=xpY;
   const mx=METRIC_BY_KEY[xk],my=METRIC_BY_KEY[yk];const team=SECVIEW.explore==='teams';
   const rows=poolFor('explore').filter(d=>metricVal(d,xk)!=null&&metricVal(d,yk)!=null);
   // label the standout players so the plot reads by-player, not as an anonymous cloud

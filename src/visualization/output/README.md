@@ -104,15 +104,15 @@ The eight silos are summaries; underneath them the pipeline now extracts **80+ m
 (a machine-readable *metric registry* travels in the data), so you can take any silo apart
 and go looking for your own patterns. Three tools do this:
 
-- **Silo drill-down (player card).** The card has a **searchable player picker** (type to
-  autocomplete), the eight FIFA-style faces, and a **tab per silo** (plus an *Overview* tab
-  that lists a percentile bar for every scoring metric). Open a silo tab and a **dropdown**
-  lets you pick any metric in that silo — scoring metrics marked `✓` — shown as one large,
-  clear **distribution** with the player marked and their percentile spelled out. One silo,
-  one metric at a time: no wall of charts.
+- **Silo drill-down (player card).** A **searchable player picker** (type to autocomplete),
+  the eight FIFA-style faces, and a percentile bar per scoring metric. Click any silo face to
+  deconstruct it into a **grid of small cards, one per metric** — the player's value, a
+  percentile, and a mini distribution with the player marked (scoring metrics badged
+  `×weight` / `✓`).
 - **Scatter explorer.** A single **per-player** scatter — one dot per player, coloured by
-  position. Pick any metric for each axis (swap them with one click); standout players are
-  labelled, hover any dot for detail, click it to open that player's card.
+  position. A **silo tab** narrows the two axis menus to that silo's metrics; your X/Y picks
+  persist across tabs, so you can cross silos (e.g. Pace on X, Defending on Y). Swap the axes
+  with one click, hover a dot for detail, click it to open that player's card.
 - **Action heat-maps** *(10-match sample)*. Where a player — or a whole squad — operates
   across the tracked matches, split into **on-ball touches**, **defensive engagements** and
   **off-ball runs**, on an attacking-left-to-right pitch. (Attack-normalised event
