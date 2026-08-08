@@ -253,8 +253,7 @@
   .lb-row.head:hover{background:none}
   .lb-rank{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
   .lb-rank .up{color:var(--good);font-size:11px}
-  .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;
-    flex:0 0 auto;letter-spacing:.01em;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;user-select:none}
+  .crest{flex:0 0 auto;display:block;user-select:none}
   .lb-name{display:flex;flex-direction:row;align-items:center;gap:9px;min-width:0}
   .lb-nametext{display:flex;flex-direction:column;min-width:0}
   .lb-name .n{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -512,14 +511,18 @@ const el=(t,a={},kids=[])=>{const e=document.createElementNS(t.startsWith('svg:'
   (Array.isArray(kids)?kids:[kids]).forEach(c=>c&&e.appendChild(c));return e;};
 const S=(t,a={},kids=[])=>el('svg:'+t,a,kids);
 
-// ---------- player/team avatars ----------
-// No photos exist in the open data (and the published page can't load external images),
-// so each player/team gets a club-coloured initials badge — a clean, unambiguous stand-in.
-const TEAM_COLOR={
+// ---------- player/team crest badges ----------
+// The open data has no photos and official club crests are trademarked, so each player/team
+// gets a self-drawn shield in the club's real colours + monogram — a clean, safe stand-in.
+const TEAM_COLOR={  // primary
   'Adelaide United':'#E31837','Auckland':'#0A2A4A','Brisbane Roar':'#F58220','Central Coast':'#002B5C',
   'Macarthur':'#1A1A1A','Melbourne City':'#6CABDD','Melbourne Victory':'#12223F','Newcastle Jets':'#1D2A5B',
   'Perth Glory':'#4B2E83','Sydney FC':'#3AA0DA','WS Wanderers':'#BE1E2D','Wellington':'#FFD200','Western United':'#0E5A3C'};
-function teamColor(t){return TEAM_COLOR[t]||'var(--series-1)';}
+const TEAM_COLOR2={  // secondary (crest trim)
+  'Adelaide United':'#F9E200','Auckland':'#1E6FBF','Brisbane Roar':'#6E2B62','Central Coast':'#FDB913',
+  'Macarthur':'#C8102E','Melbourne City':'#0A2240','Melbourne Victory':'#C0C0C0','Newcastle Jets':'#E4002B',
+  'Perth Glory':'#F58220','Sydney FC':'#002D62','WS Wanderers':'#111111','Wellington':'#111111','Western United':'#111111'};
+function teamColor(t){return TEAM_COLOR[t]||'#64748b';}
 function _textOn(hex){if(!hex||hex[0]!=='#')return '#fff';const c=hex.slice(1);
   const r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);
   return (0.299*r+0.587*g+0.114*b)/255>0.62?'#141414':'#fff';}
@@ -527,10 +530,17 @@ function _initials(d){const nm=(d.player_name||'').trim();
   if(d.isTeam){const w=nm.split(/\s+/);return (w.length>1?w[0][0]+w[1][0]:nm.slice(0,2)).toUpperCase();}
   const w=nm.split(/\s+/).filter(Boolean);
   return ((w[0]?.[0]||'')+(w.length>1?w[w.length-1][0]:'')).toUpperCase();}
-function avatar(d,size){size=size||30;const bg=teamColor(d.team_short);
-  const a=el('div',{class:'avatar',title:d.team_short||''});
-  a.style.width=a.style.height=size+'px';a.style.background=bg;a.style.color=_textOn(TEAM_COLOR[d.team_short]);
-  a.style.fontSize=Math.round(size*0.4)+'px';a.textContent=_initials(d);return a;}
+// an inline-SVG shield crest: primary fill, secondary trim, club monogram
+function avatar(d,size){size=size||30;
+  const p=teamColor(d.team_short),s=TEAM_COLOR2[d.team_short]||'#ffffff',tc=_textOn(TEAM_COLOR[d.team_short]);
+  const svg=S('svg',{class:'crest',width:size,height:Math.round(size*1.08),viewBox:'0 0 40 43'});
+  svg.appendChild(el('svg:title',{text:d.team_short||''}));
+  svg.appendChild(S('path',{d:'M4 4 H36 V21 C36 31 29 37.5 20 41 C11 37.5 4 31 4 21 Z',
+    fill:p,stroke:s,'stroke-width':3,'stroke-linejoin':'round'}));
+  const t=S('text',{x:20,y:20,'text-anchor':'middle','dominant-baseline':'central',
+    fill:tc,'font-size':16,'font-weight':800,style:'font-family:inherit'});
+  t.textContent=_initials(d);svg.appendChild(t);
+  return svg;}
 
 // ---------- state ----------
 const state={positions:new Set(META.positions),minMatches:3};
