@@ -84,8 +84,9 @@ positional defending is only partly visible — but they now appear where they b
 **Club crest badges.** The open data has no photos, and official club crests are trademarked,
 so each player/team gets a **self-drawn shield crest in the club's real colours** with a
 monogram (in the leaderboard, player card, shooting list and search) — a clean, safe stand-in
-rather than a mislabelled headshot or a lifted logo. (Licensed headshots or logo files, if
-provided keyed to players/clubs, can be embedded in their place.)
+rather than a mislabelled headshot or a lifted logo. **Real club logos are a drop-in:** put
+licensed files in [`../logos/`](../logos/) named by club slug (e.g. `sydney-fc.png`) and the
+build embeds them in place of the drawn crest — see that folder's README.
 
 **Percentiles use the Weibull plotting position** `rank / (n + 1)`, so the best player in
 a sample sits just under 100 (≈ 99) rather than exactly 100 — a sample's top isn't claimed
