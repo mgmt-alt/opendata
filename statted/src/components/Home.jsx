@@ -7,6 +7,10 @@ const CARDS = [
   ['/explorer', 'Scatter explorer', 'Plot any metric against any other, one dot per player, coloured by position.'],
   ['/profile', 'Player card', 'Eight silo faces and a per-metric drill-down for any player or club.'],
   ['/compare', 'Compare', 'Two players (or clubs) across every silo on a radar.'],
+  ['/athletic', 'Athletic map', 'Peak sprint speed against work rate — fast and relentless in the top-right.'],
+  ['/passing', 'Passing map', 'Volume vs completion, coloured by over/under-performance against xPass.'],
+  ['/shooting', 'Shooting', 'Top shot-takers over the 10 tracked matches, goals highlighted.'],
+  ['/runs', 'Run mix', 'How the busiest off-ball runners split their movement across families.'],
   ['/heatmaps', 'Heat-maps', 'Where a player operates — touches, defending and runs (10-match sample).'],
 ]
 

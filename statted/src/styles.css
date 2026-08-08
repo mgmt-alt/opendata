@@ -135,6 +135,17 @@ input[type="range"] { accent-color: var(--series-1); }
 .xp-controls label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; flex: 1 1 220px; min-width: 0; }
 .xp-controls select { min-width: 0; width: 100%; font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
 
+/* bar-list rows (shooting, run-mix) */
+.bar-row { display: grid; grid-template-columns: 190px 1fr 78px; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid var(--grid); }
+.bar-row:first-child { border-top: none; }
+.bar-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar-name span { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { display: flex; height: 20px; border-radius: 5px; overflow: hidden; background: var(--grid); }
+.bar-seg { height: 100%; }
+.bar-val { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.bar-val .g { color: var(--good); }
+@media (max-width: 560px) { .bar-row { grid-template-columns: 120px 1fr 64px; } }
+
 /* charts */
 .chart-wrap { width: 100%; overflow-x: auto; }
 svg.chart { display: block; max-width: 100%; height: auto; font-family: inherit; }

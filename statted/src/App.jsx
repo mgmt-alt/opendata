@@ -3,8 +3,13 @@ import Home from './components/Home.jsx'
 import Leaderboard from './components/Leaderboard.jsx'
 import Explorer from './components/Explorer.jsx'
 import Profile from './components/Profile.jsx'
-import Heatmaps from './components/Heatmaps.jsx'
 import Radar from './components/Radar.jsx'
+import Athletic from './components/Athletic.jsx'
+import Passing from './components/Passing.jsx'
+import Shooting from './components/Shooting.jsx'
+import RunMix from './components/RunMix.jsx'
+import Heatmaps from './components/Heatmaps.jsx'
+import ThemeToggle from './components/ThemeToggle.jsx'
 
 const LINKS = [
   ['/', 'Home', true],
@@ -12,6 +17,10 @@ const LINKS = [
   ['/explorer', 'Explorer'],
   ['/profile', 'Player'],
   ['/compare', 'Compare'],
+  ['/athletic', 'Athletic'],
+  ['/passing', 'Passing'],
+  ['/shooting', 'Shooting'],
+  ['/runs', 'Runs'],
   ['/heatmaps', 'Heat-maps'],
 ]
 
@@ -24,6 +33,7 @@ export default function App() {
           {LINKS.map(([to, label, end]) => (
             <NavLink key={to} to={to} end={end}>{label}</NavLink>
           ))}
+          <ThemeToggle />
         </div>
       </nav>
       <div className="wrap">
@@ -33,6 +43,10 @@ export default function App() {
           <Route path="/explorer" element={<Explorer />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/compare" element={<Radar />} />
+          <Route path="/athletic" element={<Athletic />} />
+          <Route path="/passing" element={<Passing />} />
+          <Route path="/shooting" element={<Shooting />} />
+          <Route path="/runs" element={<RunMix />} />
           <Route path="/heatmaps" element={<Heatmaps />} />
         </Routes>
       </div>
