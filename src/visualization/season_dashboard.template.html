@@ -140,35 +140,50 @@
   .pf-siloscore{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:0}
   .tag-s{font-size:9px;background:var(--grid);color:var(--ink-2);border-radius:4px;padding:1px 5px;
     letter-spacing:.04em;font-weight:700;vertical-align:middle}
-  .dd-hint{font-size:12.5px;color:var(--ink-2);margin:4px 0 8px;line-height:1.5}
-  .dd-hint a{color:var(--series-1);cursor:pointer}
-  .dd-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap}
-  .dd-title{font-size:14px;color:var(--ink-2)}
-  .dd-title .dd-score{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:4px}
-  /* small-multiples grid (drill-down cards + explorer panels) */
-  .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-  .mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 12px}
-  .mc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;min-height:30px}
-  .mc-lab{font-size:12px;color:var(--ink-2);line-height:1.25;font-weight:600}
+  .dd-hint{font-size:12.5px;color:var(--ink-2);margin:4px 0 10px;line-height:1.5}
+  /* searchable player/team picker (combobox) */
+  .combo{position:relative;min-width:0;flex:0 1 320px}
+  .combo input{width:100%;font:inherit;font-size:14px;padding:7px 11px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);max-width:100%}
+  .combo-list{position:absolute;z-index:40;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.18);display:none}
+  .combo-list.show{display:block}
+  .combo-row{padding:7px 11px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .combo-row:hover{background:var(--grid)}
+  .combo-row.on{background:var(--grid);font-weight:700}
+  .combo-empty{padding:8px 11px;font-size:12.5px;color:var(--muted)}
+  /* silo tabs */
+  .silo-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 12px}
+  .stab{font:inherit;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink-2)}
+  .stab:hover{border-color:var(--tabc,var(--series-1))}
+  .stab.active{background:var(--tabc,var(--series-1));border-color:var(--tabc,var(--series-1));color:#fff}
+  .stab.samp{border-style:dashed}
+  /* silo drill-down: dropdown + one big metric distribution */
+  .drill-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .drill-silo{font-size:14px;color:var(--ink-2)}
+  .drill-pick{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .drill-select{font:inherit;font-size:13.5px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink);max-width:100%}
+  .bigmc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .bigmc-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .bigmc-lab{font-size:15px;font-weight:700;color:var(--ink)}
+  .bigmc-nums{display:flex;align-items:baseline;gap:14px}
+  .bigmc-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+  .bigmc-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .bigmc-hist{display:block;width:100%;height:120px;margin:8px 0 4px}
+  .bigmc-foot{font-size:12px;color:var(--muted)}
   .wt{font-size:9.5px;font-weight:800;color:var(--series-1);background:var(--grid);
     border-radius:4px;padding:1px 5px;font-variant-numeric:tabular-nums;flex:0 0 auto}
-  .mc-fig{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 4px}
-  .mc-val{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
-  .mc-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
-  .mc-hist{display:block;width:100%;height:46px}
-  .mc-foot{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
-  /* scatter explorer + heat-map controls */
+  /* scatter explorer controls */
   .xp-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-bottom:10px}
   .xp-controls label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);
     text-transform:uppercase;letter-spacing:.05em;font-weight:600;flex:1 1 220px;min-width:0;max-width:100%}
   .xp-controls select{min-width:0;width:100%;max-width:100%}
+  .xp-controls #xpSwap{flex:0 0 auto}
   .xp-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px}
   .xp-legend .item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
-  .sm-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px 4px}
-  .sm-title{font-size:11.5px;color:var(--muted);margin-bottom:2px;line-height:1.25;min-height:29px}
-  .sm-title b{color:var(--ink-2)}
-  .xp-axisnote{margin:0 0 8px}
-  .sm-svg{display:block;width:100%;height:auto}
   .hm-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
   .pitch-line{stroke:var(--axis);stroke-width:1;fill:none;opacity:.5}
   .chip.toggle{margin-left:6px}
@@ -249,7 +264,7 @@
   @media (max-width:560px){
     .pf-row{grid-template-columns:110px 1fr 40px}
     .pf-lab{font-size:12px}
-    .sm-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+    .combo{flex:1 1 100%}
     .tbar-row{grid-template-columns:104px 1fr 46px}
     .runmix-row{grid-template-columns:96px 1fr}
   }
@@ -362,20 +377,19 @@
   <section id="explore-section">
     <div class="sec-head">
       <h2>Scatter explorer — find your own nuggets</h2>
-      <p>Pick one <strong>focus metric</strong> and see it plotted against a whole group of others at once — a grid of
-        small charts so you can scan many relationships in one glance instead of fiddling one pair at a time. The focus
-        metric is on the vertical axis of every panel. Filtered by position above; hover a dot for detail, click a dot to
-        open that player's card.</p>
+      <p>Plot <strong>any metric against any other</strong> — one dot per player. Pick the axes, and each player is placed
+        individually and coloured by position. Filtered by position above; hover a dot for detail, click it to open that
+        player's card.</p>
     </div>
     <div class="card">
       <div class="vmount" id="view-explore"></div>
       <div class="xp-controls">
-        <label>Focus metric (Y)<select id="xpFocus"></select></label>
-        <label>Compare against<select id="xpVs"></select></label>
+        <label>X axis<select id="xpX"></select></label>
+        <label>Y axis<select id="xpY"></select></label>
+        <button class="toolbtn" id="xpSwap" title="Swap the axes">⇄ swap</button>
       </div>
-      <div class="xp-axisnote caption" id="xpAxisNote"></div>
       <div class="xp-legend" id="xpLegend"></div>
-      <div class="sm-grid" id="exploreGrid"></div>
+      <div class="chart-wrap"><svg id="explore"></svg></div>
       <div class="caption" id="xpCap"></div>
     </div>
   </section>
@@ -390,16 +404,18 @@
     </div>
     <div class="card">
       <div class="toolrow">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <input id="playerSearch" type="search" placeholder="Search player…" list="playerList" autocomplete="off">
-          <datalist id="playerList"></datalist>
-          <select id="playerSelect"></select>
+        <div class="combo" id="pfCombo">
+          <input id="playerSearch" type="search" placeholder="Search player…" autocomplete="off"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list">
+          <div class="combo-list" id="playerListBox" role="listbox"></div>
+          <select id="playerSelect" hidden></select>
         </div>
         <span id="peerCount" style="font-size:12.5px;color:var(--muted)"></span>
       </div>
       <div class="vmount" id="view-profile"></div>
       <div class="pf-head" id="pfHead"></div>
       <div class="pf-faces" id="pfFaces"></div>
+      <div class="silo-tabs" id="siloTabs"></div>
       <div class="profile-grid" id="profile"></div>
     </div>
   </section>
@@ -663,18 +679,27 @@ document.querySelectorAll('[data-table]').forEach(b=>{
 });
 
 // ---------- PLAYER PROFILE ----------
-let pfSilo=null;   // null = overview of all silos; a silo name = deep-dive drill-down
+let pfTab='Overview';   // 'Overview' or a silo name — the active silo tab
+let pfMetric=null;      // metric key selected in the silo tab's drill-down dropdown
+let pfUniverse=[];      // current combobox universe (players, or teams in Team view)
+function samplePeers(team){return (team?teamEntities():DATA).filter(x=>x.shot);}
+function currentEntity(){
+  const universe=SECVIEW.profile==='teams'?teamEntities():DATA;
+  const v=document.getElementById('playerSelect').value;
+  return universe.find(p=>String(p.player_id)===String(v))||universe[0];
+}
 function renderProfile(){
   const team=SECVIEW.profile==='teams';
-  const sel=document.getElementById('playerSelect');
-  const universe=team?teamEntities():DATA;
-  const d=universe.find(p=>String(p.player_id)===String(sel.value))||universe[0];if(!d)return;
+  const d=currentEntity();if(!d)return;
   const peers=team?teamEntities():DATA.filter(p=>p.position_group===d.position_group);
   document.getElementById('peerCount').textContent=team?`vs ${peers.length} teams`:`vs ${peers.length} ${d.position_group}s`;
   document.getElementById('pfHead').innerHTML=
     `<span class="name">${d.player_name}</span>
      <span class="meta">${team?`${d.players} players (60+ min)`:`${d.position_group} · ${d.team_short} · ${d.matches} matches · ${fmt(d.minutes,0)} min/match`}</span>`;
-  // FIFA-style faces: canonical OVR + the eight silo faces
+  // keep the search box in sync with the selected entity (unless the user is typing in it)
+  const inp=document.getElementById('playerSearch');
+  if(document.activeElement!==inp)inp.value=comboLabel(d);
+  // FIFA-style faces: canonical OVR + the eight silo faces (clicking opens that silo's tab)
   const faces=document.getElementById('pfFaces');faces.innerHTML='';
   const ovr=team?d._overall:positionOverall(d);   // always the weighted total, never a single silo
   faces.appendChild(el('div',{class:'pf-ovr'},[
@@ -686,29 +711,34 @@ function renderProfile(){
     const v=d['silo__'+s];const avail=v!=null;
     const bar=el('div',{class:'fbar'});const fill=el('i');
     fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
-    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfSilo===s?' active':''),role:'button',tabindex:'0',
-      title:'Click to deconstruct this silo'},[
+    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfTab===s?' active':''),role:'button',tabindex:'0',
+      title:'Open this silo'},[
       el('div',{class:'fv',text:avail?Math.round(v):'—',style:`color:${avail?SILO_COLORS[s]:'var(--muted)'}`}),
       el('div',{class:'fl',html:s+(sample?' <span style="opacity:.55">*</span>':'')}),bar]);
-    face.onclick=()=>{pfSilo=(pfSilo===s?null:s);renderProfile();};
+    face.onclick=()=>{pfTab=s;pfMetric=null;renderProfile();};
     face.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();face.onclick();}};
     faces.appendChild(face);
   });
   faces.appendChild(el('div',{class:'pf-na',html:
     (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no per-shot xG'}));
-  renderProfileDetail(d,peers,team);
+  renderSiloTabs();
+  renderTabContent(d,peers,team);
 }
-// peers for sample metrics = the sampled pool (league-wide), not just position peers
-function samplePeers(team){return (team?teamEntities():DATA).filter(x=>x.shot);}
-// Silo drill-down: overview (all silos, compact bars for the scoring metrics) OR, when a
-// silo face is clicked, a deep dive into that silo — every metric (scoring + explore) with
-// the player's raw value, weight, good-oriented percentile and a mini distribution.
-function renderProfileDetail(d,peers,team){
+// tab bar: an Overview tab + one tab per silo
+function renderSiloTabs(){
+  const host=document.getElementById('siloTabs');host.innerHTML='';
+  ['Overview',...ALL_NAMES].forEach(t=>{
+    const b=el('button',{class:'stab'+(pfTab===t?' active':''),text:t});
+    if(t!=='Overview'){b.style.setProperty('--tabc',SILO_COLORS[t]);if(SAMPLE_NAMES.includes(t))b.classList.add('samp');}
+    b.onclick=()=>{pfTab=t;pfMetric=null;renderProfile();};
+    host.appendChild(b);
+  });
+}
+function renderTabContent(d,peers,team){
   const box=document.getElementById('profile');box.innerHTML='';
   const sp=samplePeers(team);
-  if(!pfSilo){
-    // OVERVIEW — one compact percentile bar per scoring metric, grouped by silo
-    box.appendChild(el('div',{class:'dd-hint',html:'Percentile vs peers for each scoring metric. <b>Click a silo face above</b> to deconstruct it — its full metric set, each with its own distribution.'}));
+  if(pfTab==='Overview'){
+    box.appendChild(el('div',{class:'dd-hint',html:'A percentile bar per scoring metric, grouped by silo. Open a silo tab above to drill into any single metric with its full distribution.'}));
     ALL_NAMES.forEach(silo=>{
       const sample=SAMPLE_NAMES.includes(silo);const sv=d['silo__'+silo];
       box.appendChild(el('div',{class:'pf-group'},[
@@ -716,7 +746,7 @@ function renderProfileDetail(d,peers,team){
         el('span',{class:'pf-siloscore',text:sv==null?'—':Math.round(sv),style:`color:${sv==null?'var(--muted)':SILO_COLORS[silo]}`}),
       ]));
       METRICS.filter(m=>m.silo===silo&&m.scoring).forEach(m=>{
-        const usePeers=m.src==='sample'?sp:peers;const val=metricVal(d,m.key);const p=metricPct(m.key,d,usePeers);
+        const usePeers=m.src==='sample'?sp:peers;const p=metricPct(m.key,d,usePeers);
         const row=el('div',{class:'pf-row'});
         row.appendChild(el('div',{class:'pf-lab',text:m.label}));
         const track=el('div',{class:'pf-track'});track.appendChild(el('div',{class:'pf-mid'}));
@@ -730,80 +760,108 @@ function renderProfileDetail(d,peers,team){
     });
     return;
   }
-  // DEEP-DIVE — small-multiples grid: one card per metric, each with its own distribution
-  const sample=SAMPLE_NAMES.includes(pfSilo);const scoreSet=ALL_SILOS[pfSilo];const sv=d['silo__'+pfSilo];
-  const head=el('div',{class:'dd-head'},[
-    el('div',{class:'dd-title',html:`<span style="color:${SILO_COLORS[pfSilo]}">■</span> Deconstructing <b style="color:${SILO_COLORS[pfSilo]}">${pfSilo}</b>${sample?' <span class="tag-s">10-match</span>':''} <span class="dd-score" style="color:${SILO_COLORS[pfSilo]}">${sv==null?'—':Math.round(sv)}</span>`}),
-    el('button',{class:'toolbtn',id:'ddAll',text:'← all silos'}),
-  ]);
-  box.appendChild(head);
-  head.querySelector('#ddAll').onclick=()=>{pfSilo=null;renderProfile();};
-  let mets=METRICS.filter(m=>m.silo===pfSilo).slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
-  const grid=el('div',{class:'sm-grid mc-grid'});box.appendChild(grid);
-  mets.forEach(m=>grid.appendChild(metricCard(m,d,m.src==='sample'?sp:peers,scoreSet&&scoreSet[m.key])));
+  // SILO TAB — pick one metric from a dropdown, see its full distribution
+  const silo=pfTab;const sample=SAMPLE_NAMES.includes(silo);const sv=d['silo__'+silo];
+  const mets=METRICS.filter(m=>m.silo===silo).slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
+  if(pfMetric==null||!mets.some(m=>m.key===pfMetric))pfMetric=(mets.find(m=>m.scoring)||mets[0]).key;
+  const sel=el('select',{class:'drill-select',id:'drillMetric'});
+  mets.forEach(m=>sel.appendChild(el('option',{value:m.key,text:m.label+(m.scoring?'  ✓':'')})));
+  sel.value=pfMetric;sel.onchange=()=>{pfMetric=sel.value;renderTabContent(d,peers,team);};
+  box.appendChild(el('div',{class:'drill-head'},[
+    el('div',{class:'drill-silo',html:`<span style="color:${SILO_COLORS[silo]}">■</span> <b>${silo}</b>${sample?' <span class="tag-s">10-match</span>':''} · silo score <b style="color:${SILO_COLORS[silo]}">${sv==null?'—':Math.round(sv)}</b>`}),
+    el('label',{class:'drill-pick'},[el('span',{text:'Metric'}),sel]),
+  ]));
+  const m=METRIC_BY_KEY[pfMetric];
+  box.appendChild(bigMetricDetail(m,d,m.src==='sample'?sp:peers));
+  const w=ALL_SILOS[silo][m.key];
+  box.appendChild(el('div',{class:'caption',text:w?`Feeds the ${silo} score (weight ×${w}).`
+    :(m.scoring?`Feeds the ${silo} score.`:`Context metric — shown for exploration, not part of the ${silo} score.`)}));
 }
-// a small-multiple card: metric name, the player's value + percentile, and a mini histogram
-// of the peer distribution with the player marked.
-function metricCard(m,d,peers,weight){
+// one clear, full-width metric detail: value, percentile, a big distribution with the player marked
+function bigMetricDetail(m,d,peers){
   const val=metricVal(d,m.key);const p=metricPct(m.key,d,peers);
   const good=p==null?'var(--muted)':(p>=50?'var(--pos)':'var(--neg)');
-  const card=el('div',{class:'mc'});
-  const badge=weight?el('span',{class:'wt',title:`weight ×${weight} in the ${m.silo} score`,text:'×'+weight})
-    :(m.scoring?el('span',{class:'wt',title:`builds the ${m.silo} score`,text:'✓'}):null);
-  card.appendChild(el('div',{class:'mc-top'},[el('span',{class:'mc-lab',text:m.label}),badge]));
-  card.appendChild(el('div',{class:'mc-fig'},[
-    el('span',{class:'mc-val',text:fmtMetric(m.key,val)}),
-    el('span',{class:'mc-pct',text:p==null?'—':Math.round(p),style:`color:${good}`}),
+  const wrap=el('div',{class:'bigmc'});
+  wrap.appendChild(el('div',{class:'bigmc-top'},[
+    el('div',{class:'bigmc-lab',text:m.label}),
+    el('div',{class:'bigmc-nums'},[
+      el('span',{class:'bigmc-val',text:fmtMetric(m.key,val)}),
+      el('span',{class:'bigmc-pct',text:(p==null?'—':Math.round(p))+' pctl',style:`color:${good}`}),
+    ]),
   ]));
-  const svg=S('svg',{class:'mc-hist'});card.appendChild(svg);
-  miniHist(svg,m,d,peers,val);
-  card.appendChild(el('div',{class:'mc-foot',text:p==null?'no peer data':`${p>=50?'top':'bottom'} ${p>=50?Math.round(100-p):Math.round(p)}% · pctl ${Math.round(p)}`}));
-  return card;
+  const svg=S('svg',{class:'bigmc-hist'});wrap.appendChild(svg);
+  miniHist(svg,m,d,peers,val,120);
+  const pv=peers.map(x=>metricVal(x,m.key)).filter(x=>x!=null);
+  const lo=pv.length?Math.min(...pv):null,hi=pv.length?Math.max(...pv):null;
+  const peerLbl=d.isTeam?'teams':(m.src==='sample'?'sampled players':d.position_group+'s');
+  wrap.appendChild(el('div',{class:'bigmc-foot',html:p==null?'no peer data':
+    `<b style="color:${good}">${p>=50?'Top '+Math.round(100-p):'Bottom '+Math.round(p)}%</b> of ${pv.length} ${peerLbl} · peer range ${fmtMetric(m.key,lo)} – ${fmtMetric(m.key,hi)}`}));
+  return wrap;
 }
-// mini histogram of peer values with the player's position marked
-function miniHist(svg,m,d,peers,val){
-  const W=svg.parentElement?svg.parentElement.clientWidth||220:220,H=46;
+// histogram of peer values with the player's value marked; H defaults to a compact 46
+function miniHist(svg,m,d,peers,val,H){
+  H=H||46;const W=svg.parentElement?svg.parentElement.clientWidth||220:220;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);svg.textContent='';
   const vals=peers.map(p=>metricVal(p,m.key)).filter(x=>x!=null);
   if(!vals.length||val==null){svg.appendChild(S('text',{x:W/2,y:H/2+3,'text-anchor':'middle',class:'axis',text:'no peers'}));return;}
   const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
-  const N=Math.min(16,Math.max(6,Math.round(Math.sqrt(vals.length))));
+  const N=Math.min(20,Math.max(6,Math.round(Math.sqrt(vals.length))));
   const bins=new Array(N).fill(0);
   vals.forEach(v=>{let i=Math.floor((v-min)/span*N);if(i>=N)i=N-1;if(i<0)i=0;bins[i]++;});
-  const bmax=Math.max(...bins);const pad=3,bw=(W-2*pad)/N,base=H-12;
+  const bmax=Math.max(...bins);const pad=3,bw=(W-2*pad)/N,base=H-13;
   const myBin=Math.min(N-1,Math.max(0,Math.floor((val-min)/span*N)));
   bins.forEach((c,i)=>{const h=c/bmax*(base-4);
     svg.appendChild(S('rect',{x:(pad+i*bw+0.6).toFixed(1),y:(base-h).toFixed(1),width:(bw-1.2).toFixed(1),height:h.toFixed(1),
       rx:1.5,fill:i===myBin?SILO_COLORS[m.silo]:'var(--grid)'}));});
-  // player marker line
   const mx=pad+((val-min)/span)*(W-2*pad);
   svg.appendChild(S('line',{x1:mx.toFixed(1),x2:mx.toFixed(1),y1:2,y2:base,stroke:SILO_COLORS[m.silo],'stroke-width':2}));
-  svg.appendChild(S('circle',{cx:mx.toFixed(1),cy:3.5,r:3,fill:SILO_COLORS[m.silo]}));
-  // min / max labels
+  svg.appendChild(S('circle',{cx:mx.toFixed(1),cy:3.5,r:3.2,fill:SILO_COLORS[m.silo]}));
   svg.appendChild(S('text',{x:pad,y:H-2,class:'axis',text:fmt(min,0)}));
   svg.appendChild(S('text',{x:W-pad,y:H-2,'text-anchor':'end',class:'axis',text:fmt(max,0)}));
 }
+// ----- searchable player/team picker (combobox with autocomplete) -----
+function comboLabel(d){return d.isTeam?d.player_name:`${d.player_name} — ${d.team_short}`;}
 function buildProfileOptions(){
-  const sel=document.getElementById('playerSelect');const dl=document.getElementById('playerList');
-  sel.innerHTML='';dl.innerHTML='';
   const team=SECVIEW.profile==='teams';
-  const universe=team?teamEntities():DATA;
-  const sorted=[...universe].sort((a,b)=>a.player_name.localeCompare(b.player_name));
-  sorted.forEach(d=>{sel.appendChild(el('option',{value:d.player_id,text:team?d.player_name:`${d.player_name} — ${d.team_short}`}));
-    dl.appendChild(el('option',{value:d.player_name}));});
-  // default: fastest player, or the top team
-  const def=team?[...universe].sort((a,b)=>(b._overall??0)-(a._overall??0))[0]
+  pfUniverse=[...(team?teamEntities():DATA)].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  const sel=document.getElementById('playerSelect');sel.innerHTML='';
+  pfUniverse.forEach(d=>sel.appendChild(el('option',{value:d.player_id,text:d.player_name})));
+  const def=team?[...pfUniverse].sort((a,b)=>(b._overall??0)-(a._overall??0))[0]
     :DATA.filter(d=>d.top_speed!=null).reduce((a,b)=>b.top_speed>a.top_speed?b:a);
   sel.value=def.player_id;
-  document.getElementById('playerSearch').placeholder=team?'Search team…':'Search player…';
+  const inp=document.getElementById('playerSearch');inp.placeholder=team?'Search team…':'Search player…';
+  inp.value=comboLabel(def);
+}
+function selectPlayer(id){
+  const d=pfUniverse.find(x=>String(x.player_id)===String(id));if(!d)return;
+  document.getElementById('playerSelect').value=id;
+  document.getElementById('playerSearch').value=comboLabel(d);
+  hideCombo();renderProfile();
+}
+function showCombo(){document.getElementById('playerListBox').classList.add('show');
+  document.getElementById('playerSearch').setAttribute('aria-expanded','true');}
+function hideCombo(){document.getElementById('playerListBox').classList.remove('show');
+  document.getElementById('playerSearch').setAttribute('aria-expanded','false');}
+function renderComboList(q){
+  const box=document.getElementById('playerListBox');box.innerHTML='';
+  const ql=q.trim().toLowerCase();
+  const matches=pfUniverse.filter(d=>!ql||d.player_name.toLowerCase().includes(ql)||(d.team_short||'').toLowerCase().includes(ql)).slice(0,40);
+  if(!matches.length){box.appendChild(el('div',{class:'combo-empty',text:'No match'}));showCombo();return;}
+  const cur=document.getElementById('playerSelect').value;
+  matches.forEach(d=>{const row=el('div',{class:'combo-row'+(String(d.player_id)===String(cur)?' on':''),role:'option',text:comboLabel(d)});
+    row.onmousedown=e=>{e.preventDefault();selectPlayer(d.player_id);};box.appendChild(row);});
+  showCombo();
 }
 function initProfile(){
   buildProfileOptions();
-  document.getElementById('playerSelect').onchange=renderProfile;
-  document.getElementById('playerSearch').addEventListener('change',e=>{
-    const universe=SECVIEW.profile==='teams'?teamEntities():DATA;
-    const m=universe.find(d=>d.player_name.toLowerCase()===e.target.value.toLowerCase());
-    if(m){document.getElementById('playerSelect').value=m.player_id;renderProfile();}});
+  const inp=document.getElementById('playerSearch');
+  inp.addEventListener('focus',()=>{inp.select();renderComboList('');});
+  inp.addEventListener('input',()=>renderComboList(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const first=document.querySelector('#playerListBox .combo-row');
+      if(first){e.preventDefault();first.dispatchEvent(new MouseEvent('mousedown'));}}
+    else if(e.key==='Escape'){hideCombo();inp.blur();}});
+  inp.addEventListener('blur',()=>setTimeout(hideCombo,150));
 }
 
 // ---------- VIEW MODE: players vs teams ----------
@@ -1206,90 +1264,55 @@ function renderRadar(){
   host.innerHTML=leg;
 }
 
-// ---------- SCATTER EXPLORER (small multiples) ----------
+// ---------- SCATTER EXPLORER (one dot per player) ----------
 const POS_COLOR={'Central Defender':'var(--c2)','Full Back':'var(--c1)','Midfield':'var(--c3)',
   'Wide Attacker':'var(--c5)','Center Forward':'var(--c6)','Team':'var(--c7)'};
-// one headline metric per silo for the cross-silo comparison group
-const HEADLINE=['top_speed','m_per_min','pass_over','dangerous_passes','dangerous_runs','shots','regains','takeons'];
 function fillExploreOptions(){
   const groups={};METRICS.forEach(m=>{(groups[m.silo]??=[]).push(m);});
-  const foc=document.getElementById('xpFocus');const fcur=foc.value;foc.innerHTML='';
-  ALL_NAMES.forEach(s=>{if(!groups[s])return;const og=el('optgroup',{label:s});
-    groups[s].forEach(m=>og.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));foc.appendChild(og);});
-  if(fcur&&[...foc.options].some(o=>o.value===fcur))foc.value=fcur;
-  const vs=document.getElementById('xpVs');const vcur=vs.value;vs.innerHTML='';
-  vs.appendChild(el('option',{value:'__headline',text:'Headline metrics (all silos)'}));
-  ALL_NAMES.forEach(s=>{if(groups[s])vs.appendChild(el('option',{value:s,text:s+' metrics'}));});
-  if(vcur&&[...vs.options].some(o=>o.value===vcur))vs.value=vcur;
+  ['xpX','xpY'].forEach(id=>{const sel=document.getElementById(id);const cur=sel.value;sel.innerHTML='';
+    ALL_NAMES.forEach(s=>{if(!groups[s])return;const og=el('optgroup',{label:s});
+      groups[s].forEach(m=>og.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));sel.appendChild(og);});
+    if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;});
 }
 function initExplore(){
   fillExploreOptions();
-  document.getElementById('xpFocus').value='takeons';
-  document.getElementById('xpVs').value='Dribbling';
-  document.getElementById('xpFocus').onchange=renderExplore;
-  document.getElementById('xpVs').onchange=renderExplore;
+  document.getElementById('xpX').value='top_speed';
+  document.getElementById('xpY').value='takeons';
+  document.getElementById('xpX').onchange=renderExplore;
+  document.getElementById('xpY').onchange=renderExplore;
+  document.getElementById('xpSwap').onclick=()=>{const a=document.getElementById('xpX'),b=document.getElementById('xpY');
+    const t=a.value;a.value=b.value;b.value=t;renderExplore();};
 }
 function openCardFor(d){if(d.isTeam)return;const s=document.getElementById('playerSelect');
   if(![...s.options].some(o=>String(o.value)===String(d.player_id)))return;
   SECVIEW.profile='players';
   [...document.querySelectorAll('#view-profile .vseg button')].forEach(b=>b.setAttribute('aria-pressed',b.textContent==='Players'));
-  buildProfileOptions();s.value=d.player_id;pfSilo=null;renderProfile();
+  buildProfileOptions();selectPlayer(d.player_id);
   document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});}
 function renderExplore(){
-  const yk=document.getElementById('xpFocus').value;const grp=document.getElementById('xpVs').value;
-  const my=METRIC_BY_KEY[yk];const team=SECVIEW.explore==='teams';
-  let xs=grp==='__headline'?HEADLINE.slice():METRICS.filter(m=>m.silo===grp).map(m=>m.key);
-  xs=xs.filter(k=>k!==yk);
-  const pool=poolFor('explore');
-  // one shared Y-axis note (it's the same focus metric on every panel)
-  document.getElementById('xpAxisNote').innerHTML=
-    `Every chart: <b>Y = ${my?my.label:yk}</b> · X = the metric named on each panel`;
-  const grid=document.getElementById('exploreGrid');grid.innerHTML='';
-  xs.forEach(xk=>{
-    const mx=METRIC_BY_KEY[xk];
-    const rows=pool.filter(d=>metricVal(d,xk)!=null&&metricVal(d,yk)!=null);
-    const panel=el('div',{class:'sm-panel'});
-    panel.appendChild(el('div',{class:'sm-title',title:(mx?mx.label:xk),html:`X: <b>${mx?mx.label:xk}</b>`}));
-    const svg=S('svg',{class:'sm-svg'});panel.appendChild(svg);
-    grid.appendChild(panel);
-    miniScatter(svg,rows,xk,yk,team);
+  const xk=document.getElementById('xpX').value,yk=document.getElementById('xpY').value;
+  const mx=METRIC_BY_KEY[xk],my=METRIC_BY_KEY[yk];const team=SECVIEW.explore==='teams';
+  const rows=poolFor('explore').filter(d=>metricVal(d,xk)!=null&&metricVal(d,yk)!=null);
+  // label the standout players so the plot reads by-player, not as an anonymous cloud
+  const yBetter=my&&my.better===-1?-1:1, xBetter=mx&&mx.better===-1?-1:1;
+  const labelled=[...rows].sort((a,b)=>
+    (yBetter*(metricVal(b,yk)-metricVal(a,yk)))+(xBetter*(metricVal(b,xk)-metricVal(a,xk)))*0).slice(0,7);
+  scatter('explore',rows,{
+    x:d=>metricVal(d,xk),y:d=>metricVal(d,yk),
+    xlab:(mx?mx.label:xk)+' →',ylab:(my?my.label:yk)+' →',
+    fill:d=>team?'var(--series-1)':(POS_COLOR[d.position_group]||'var(--series-1)'),
+    label:()=>labelled,
+    onclick:d=>openCardFor(d),
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.isTeam?d.players+' players':d.position_group+' · '+d.team_short}</div>
+      <div class="row"><span>${my?my.label:yk}</span><b>${fmtMetric(yk,metricVal(d,yk))}</b></div>
+      <div class="row"><span>${mx?mx.label:xk}</span><b>${fmtMetric(xk,metricVal(d,xk))}</b></div>`
   });
-  const anySample=(my&&my.src==='sample')||xs.some(k=>METRIC_BY_KEY[k]&&METRIC_BY_KEY[k].src==='sample');
+  const anySample=(mx&&mx.src==='sample')||(my&&my.src==='sample');
   document.getElementById('xpCap').textContent=
-    `${pool.length} ${team?'teams':'players'} in view · ${xs.length} comparison charts`+(anySample?' · * = 10-match sample metric':'');
-  const leg=document.getElementById('xpLegend');
-  leg.innerHTML=(!team)?META.positions.map(p=>`<span class="item"><span class="swatch" style="background:${POS_COLOR[p]||'var(--series-1)'}"></span>${p}</span>`).join(''):'';
-}
-// compact scatter for a small-multiple panel: minimal axes, position colour, hover + click
-function miniScatter(svg,rows,xk,yk,team){
-  const W=svg.parentElement.clientWidth||300,H=Math.round(W*0.72);
-  const m={l:34,r:8,t:8,b:24};
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
-  svg.textContent='';
-  const X0=m.l,X1=W-m.r,Y0=H-m.b,Y1=m.t;
-  if(!rows.length){svg.appendChild(S('text',{x:W/2,y:H/2,'text-anchor':'middle',class:'axis',text:'no data'}));return;}
-  const xv=rows.map(d=>metricVal(d,xk)),yv=rows.map(d=>metricVal(d,yk));
-  const xmin=Math.min(...xv),xmax=Math.max(...xv),ymin=Math.min(...yv),ymax=Math.max(...yv);
-  const pdx=(xmax-xmin)*0.06||1,pdy=(ymax-ymin)*0.08||1;
-  const X=v=>X0+((v-(xmin-pdx))/((xmax+pdx)-(xmin-pdx)))*(X1-X0);
-  const Y=v=>Y0-((v-(ymin-pdy))/((ymax+pdy)-(ymin-pdy)))*(Y0-Y1);
-  // frame + min/max ticks only
-  svg.appendChild(S('line',{class:'baseline',x1:X0,x2:X1,y1:Y0,y2:Y0}));
-  svg.appendChild(S('line',{class:'baseline',x1:X0,x2:X0,y1:Y1,y2:Y0}));
-  [ymin,ymax].forEach(t=>svg.appendChild(S('text',{class:'axis',x:X0-4,y:(Y(t)+3).toFixed(1),'text-anchor':'end',text:fmt(t,0)})));
-  [xmin,xmax].forEach(t=>svg.appendChild(S('text',{class:'axis',x:X(t).toFixed(1),y:Y0+15,'text-anchor':'middle',text:fmt(t,0)})));
-  rows.forEach(d=>{
-    const c=S('circle',{class:'dot',cx:X(metricVal(d,xk)).toFixed(1),cy:Y(metricVal(d,yk)).toFixed(1),r:4,
-      fill:team?'var(--series-1)':(POS_COLOR[d.position_group]||'var(--series-1)')});
-    c.addEventListener('mouseenter',ev=>{showTip(
-      `<b>${d.player_short_name}</b><div class="pos">${d.isTeam?d.players+' players':d.position_group+' · '+d.team_short}</div>
-       <div class="row"><span>${METRIC_BY_KEY[yk].label}</span><b>${fmtMetric(yk,metricVal(d,yk))}</b></div>
-       <div class="row"><span>${METRIC_BY_KEY[xk].label}</span><b>${fmtMetric(xk,metricVal(d,xk))}</b></div>`,ev);c.setAttribute('r',6);});
-    c.addEventListener('mousemove',moveTip);
-    c.addEventListener('mouseleave',()=>{hideTip();c.setAttribute('r',4);});
-    if(!team){c.style.cursor='pointer';c.addEventListener('click',()=>openCardFor(d));}
-    svg.appendChild(c);
-  });
+    `${rows.length} ${team?'teams':'players'} · one dot each · click to open a card`+(anySample?' · * = 10-match sample metric':'');
+  document.getElementById('xpLegend').innerHTML=(!team)
+    ?META.positions.map(p=>`<span class="item"><span class="swatch" style="background:${POS_COLOR[p]||'var(--series-1)'}"></span>${p}</span>`).join('')
+    :'<span class="item">Each dot = one team</span>';
 }
 
 // ---------- ACTION HEAT-MAPS ----------

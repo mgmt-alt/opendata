@@ -104,17 +104,15 @@ The eight silos are summaries; underneath them the pipeline now extracts **80+ m
 (a machine-readable *metric registry* travels in the data), so you can take any silo apart
 and go looking for your own patterns. Three tools do this:
 
-- **Silo drill-down (player card).** Click any silo face and it expands into a **grid of
-  small cards, one per metric** behind that silo — the ones that build the score (marked
-  with their `×weight`, or a `✓` for the single-composite sample silos) **and** a wider set
-  of exploratory measures. Each card shows the player's value, a good-oriented percentile,
-  and a **mini histogram** of the peer distribution with the player marked, so you see where
-  they sit, not just a number.
-- **Scatter explorer.** Pick one **focus metric** and a **comparison group** (a silo, or a
-  headline set spanning all silos); the tool draws a **grid of small scatter panels** —
-  the focus metric on the Y axis of every panel, a different metric on each X — so you can
-  scan many relationships at once instead of configuring one pair at a time. Coloured by
-  position, filtered by position, hover for detail, click a dot to open that player's card.
+- **Silo drill-down (player card).** The card has a **searchable player picker** (type to
+  autocomplete), the eight FIFA-style faces, and a **tab per silo** (plus an *Overview* tab
+  that lists a percentile bar for every scoring metric). Open a silo tab and a **dropdown**
+  lets you pick any metric in that silo — scoring metrics marked `✓` — shown as one large,
+  clear **distribution** with the player marked and their percentile spelled out. One silo,
+  one metric at a time: no wall of charts.
+- **Scatter explorer.** A single **per-player** scatter — one dot per player, coloured by
+  position. Pick any metric for each axis (swap them with one click); standout players are
+  labelled, hover any dot for detail, click it to open that player's card.
 - **Action heat-maps** *(10-match sample)*. Where a player — or a whole squad — operates
   across the tracked matches, split into **on-ball touches**, **defensive engagements** and
   **off-ball runs**, on an attacking-left-to-right pitch. (Attack-normalised event
