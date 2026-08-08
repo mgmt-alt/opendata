@@ -135,6 +135,21 @@ input[type="range"] { accent-color: var(--series-1); }
 .xp-controls label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; flex: 1 1 220px; min-width: 0; }
 .xp-controls select { min-width: 0; width: 100%; font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); }
 
+/* data table */
+.tbl-wrap { width: 100%; overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { position: sticky; top: 0; background: var(--surface); text-align: left; padding: 8px 10px; cursor: pointer;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; user-select: none; }
+.tbl th:hover { color: var(--ink); }
+.tbl td { padding: 7px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.tbl td.num, .tbl th.num { font-variant-numeric: tabular-nums; }
+.tbl tr.clickable { cursor: pointer; }
+.tbl tbody tr:hover { background: var(--grid); }
+.seg-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg-toggle button { font: inherit; font-size: 12.5px; padding: 4px 12px; border: none; border-left: 1px solid var(--border); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.seg-toggle button:first-child { border-left: none; }
+.seg-toggle button[aria-pressed="true"] { background: var(--series-1); color: #fff; }
+
 /* bar-list rows (shooting, run-mix) */
 .bar-row { display: grid; grid-template-columns: 190px 1fr 78px; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid var(--grid); }
 .bar-row:first-child { border-top: none; }

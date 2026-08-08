@@ -74,6 +74,32 @@ export default function Radar() {
           <span className="item"><span className="swatch" style={{ background: 'var(--c1)' }} />{A.player_name}</span>
           <span className="item"><span className="swatch" style={{ background: 'var(--c2)' }} />{B.player_name}</span>
         </div>
+        <div className="tbl-wrap" style={{ marginTop: 8 }}>
+          <table className="tbl">
+            <thead><tr>
+              <th>Silo</th>
+              <th className="num" style={{ color: 'var(--c1)' }}>{A.player_short_name}</th>
+              <th className="num" style={{ color: 'var(--c2)' }}>{B.player_short_name}</th>
+              <th className="num">Δ</th>
+            </tr></thead>
+            <tbody>
+              {ALL_NAMES.map((s) => {
+                const a = A['silo__' + s], b = B['silo__' + s]
+                const diff = a != null && b != null ? a - b : null
+                return (
+                  <tr key={s}>
+                    <td><span style={{ color: SILO_COLORS[s] }}>■</span> {s}</td>
+                    <td className="num" style={{ fontWeight: a > b ? 700 : 400 }}>{a == null ? '—' : Math.round(a)}</td>
+                    <td className="num" style={{ fontWeight: b > a ? 700 : 400 }}>{b == null ? '—' : Math.round(b)}</td>
+                    <td className="num" style={{ color: diff > 0 ? 'var(--c1)' : diff < 0 ? 'var(--c2)' : 'var(--muted)' }}>
+                      {diff == null ? '—' : (diff > 0 ? '+' : '') + Math.round(diff)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   )
