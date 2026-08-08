@@ -81,6 +81,10 @@ centre-backs, not pressing forwards). Centre-backs remain somewhat under-credite
 tracking is possession-centric and has no interception/tackle/aerial events, so a centre-back's
 positional defending is only partly visible — but they now appear where they belong.
 
+**Player badges.** The open data has no photos, so each player/team gets a **club-coloured
+initials badge** (in the leaderboard, player card, shooting list and search) — a clean,
+unambiguous stand-in rather than a mislabelled or unlicensed headshot.
+
 **Percentiles use the Weibull plotting position** `rank / (n + 1)`, so the best player in
 a sample sits just under 100 (≈ 99) rather than exactly 100 — a sample's top isn't claimed
 to beat 100% of a larger population — and the worst sits just above 0.
