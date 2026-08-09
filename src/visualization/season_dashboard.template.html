@@ -1,0 +1,1430 @@
+<title>A-League 2024/25 — SkillCorner Season Explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#ffffff;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --series-1:#2a78d6;         /* blue */
+    --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;   /* diverging */
+    --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300;
+    --c7:#4a3aa7; --c8:#e34948;
+    --good:#006300;
+    --shadow:0 1px 2px rgba(11,11,11,.05),0 4px 16px rgba(11,11,11,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme:dark;
+      --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1e;
+      --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --series-1:#3987e5;
+      --pos:#3987e5; --neg:#e66767; --mid:#383835;
+      --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c8:#e66767;
+      --good:#0ca30c;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1e;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --series-1:#3987e5;
+    --pos:#3987e5; --neg:#e66767; --mid:#383835;
+    --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300;
+    --good:#0ca30c;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 20px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 20px 72px}
+  header.top{margin-bottom:8px}
+  .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  h1{font-size:clamp(24px,4vw,38px);line-height:1.12;margin:.25em 0 .15em;font-weight:700}
+  .sub{color:var(--ink-2);font-size:15px;max-width:70ch}
+  a{color:var(--series-1)}
+  section{margin-top:40px}
+  .sec-head h2{font-size:20px;margin:0 0 2px;font-weight:650}
+  .sec-head p{margin:0 0 14px;color:var(--ink-2);font-size:14px;max-width:78ch}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px 18px 14px;box-shadow:var(--shadow)}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .v{font-size:30px;font-weight:700;letter-spacing:-.01em;line-height:1}
+  .kpi .l{font-size:12.5px;color:var(--ink-2);margin-top:6px}
+  .kpi .u{font-size:12px;color:var(--muted)}
+  /* filter bar */
+  .filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+    position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--page) 88%,transparent);
+    backdrop-filter:blur(8px);padding:12px 6px;border-bottom:1px solid var(--border);margin-top:28px}
+  .filters .lab{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer;user-select:none;transition:.12s}
+  .chip[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
+  .chip:hover{border-color:var(--series-1)}
+  /* per-graph Players/Teams segmented toggle */
+  .vseg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:0 0 auto}
+  .vseg .lab{padding:0 8px;align-self:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;background:var(--surface)}
+  .vseg button{font:inherit;font-size:12.5px;padding:4px 12px;border:none;border-left:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer}
+  .vseg button[aria-pressed="true"]{background:var(--series-1);color:#fff}
+  .vmount{margin-bottom:10px}
+  select,input[type=search]{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);max-width:100%}
+  #playerSelect{max-width:min(100%,340px);text-overflow:ellipsis}
+  .toolrow>div{min-width:0;max-width:100%}
+  .toolbtn{font:inherit;font-size:13px;padding:5px 12px;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-2);cursor:pointer}
+  .toolbtn[aria-pressed="true"]{background:var(--series-1);border-color:var(--series-1);color:#fff}
+  /* chart */
+  .chart-wrap{width:100%;overflow-x:auto}
+  svg{display:block;max-width:100%;height:auto;font-family:inherit}
+  .axis text{fill:var(--muted);font-size:11px}
+  .axis-title{fill:var(--ink-2);font-size:12px;font-weight:600}
+  .gridline{stroke:var(--grid);stroke-width:1;shape-rendering:crispEdges}
+  .baseline{stroke:var(--axis);stroke-width:1;shape-rendering:crispEdges}
+  .dot{stroke:var(--surface);stroke-width:1.5;cursor:pointer}
+  .dot.dim{opacity:.16}
+  .dlabel{fill:var(--ink);font-size:11px;font-weight:600;pointer-events:none;paint-order:stroke;
+    stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:2px 0 12px;font-size:12.5px;color:var(--ink-2)}
+  .legend .item{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .caption{font-size:12px;color:var(--muted);margin-top:8px}
+  /* tooltip */
+  .tt{position:fixed;pointer-events:none;z-index:50;background:var(--surface-2);color:var(--ink);
+    border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12.5px;
+    box-shadow:var(--shadow);max-width:240px;opacity:0;transition:opacity .08s}
+  .tt b{font-size:13px}
+  .tt .row{display:flex;justify-content:space-between;gap:14px;color:var(--ink-2)}
+  .tt .row b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .tt .pos{color:var(--muted);font-size:11.5px;margin-top:1px}
+  /* profile */
+  .profile-grid{display:grid;grid-template-columns:1fr;gap:4px}
+  .pf-group{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin:14px 0 4px}
+  .pf-row{display:grid;grid-template-columns:150px 1fr 46px;align-items:center;gap:10px;padding:3px 0}
+  .pf-lab{font-size:13px;color:var(--ink-2);text-align:right}
+  .pf-track{position:relative;height:22px;background:var(--grid);border-radius:6px;overflow:hidden}
+  .pf-mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--axis)}
+  .pf-fill{position:absolute;top:0;bottom:0;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1),left .5s}
+  .pf-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .pf-head{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+  .pf-headtext{display:flex;flex-direction:column;min-width:0}
+  .pf-head .name{font-size:20px;font-weight:700}
+  .pf-head .meta{font-size:13px;color:var(--ink-2)}
+  .pf-faces{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 6px;align-items:stretch}
+  .pf-ovr{display:flex;flex-direction:column;justify-content:center;background:var(--series-1);color:#fff;
+    border-radius:12px;padding:10px 16px;min-width:96px}
+  .pf-ovr .big{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .pf-ovr .lbl{font-size:11px;letter-spacing:.06em;opacity:.85;margin-top:2px}
+  .pf-face{flex:1 1 96px;min-width:96px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:9px 11px}
+  .pf-face .fv{font-size:23px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .pf-face .fl{font-size:10.5px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;font-weight:600}
+  .pf-face .fbar{height:4px;border-radius:2px;background:var(--grid);margin-top:7px;overflow:hidden}
+  .pf-face .fbar i{display:block;height:100%}
+  .pf-na{font-size:11.5px;color:var(--muted);align-self:center;padding-left:2px}
+  .pf-na b{color:var(--ink-2);font-weight:600}
+  .pf-face.sample{border-style:dashed}
+  .pf-face[role=button]{cursor:pointer;transition:border-color .15s,transform .1s}
+  .pf-face[role=button]:hover{border-color:var(--series-1)}
+  .pf-face.active{border-color:var(--series-1);box-shadow:0 0 0 2px var(--series-1) inset}
+  /* silo drill-down */
+  .pf-group{display:flex;justify-content:space-between;align-items:center}
+  .pf-siloscore{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .tag-s{font-size:9px;background:var(--grid);color:var(--ink-2);border-radius:4px;padding:1px 5px;
+    letter-spacing:.04em;font-weight:700;vertical-align:middle}
+  .dd-hint{font-size:12.5px;color:var(--ink-2);margin:4px 0 10px;line-height:1.5}
+  /* searchable player/team picker (combobox) */
+  .combo{position:relative;min-width:0;flex:0 1 320px}
+  .combo input{width:100%;font:inherit;font-size:14px;padding:7px 11px;border-radius:8px;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);max-width:100%}
+  .combo-list{position:absolute;z-index:40;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.18);display:none}
+  .combo-list.show{display:block}
+  .combo-row{padding:6px 11px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+  .combo-row span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .combo-row:hover{background:var(--grid)}
+  .combo-row.on{background:var(--grid);font-weight:700}
+  .combo-empty{padding:8px 11px;font-size:12.5px;color:var(--muted)}
+  /* silo tabs */
+  .silo-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 12px}
+  .stab{font:inherit;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink-2)}
+  .stab:hover{border-color:var(--tabc,var(--series-1))}
+  .stab.active{background:var(--tabc,var(--series-1));border-color:var(--tabc,var(--series-1));color:#fff}
+  .stab.samp{border-style:dashed}
+  /* silo drill-down (player card): deconstruct header + small-multiples metric cards */
+  .dd-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap}
+  .dd-title{font-size:14px;color:var(--ink-2)}
+  .dd-title .dd-score{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:4px}
+  .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 12px}
+  .mc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;min-height:30px}
+  .mc-lab{font-size:12px;color:var(--ink-2);line-height:1.25;font-weight:600}
+  .mc-fig{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 4px}
+  .mc-val{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mc-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mc-hist{display:block;width:100%;height:46px}
+  .mc-foot{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+  .wt{font-size:9.5px;font-weight:800;color:var(--series-1);background:var(--grid);
+    border-radius:4px;padding:1px 5px;font-variant-numeric:tabular-nums;flex:0 0 auto}
+  /* scatter explorer controls */
+  .xp-controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-bottom:10px}
+  .xp-controls label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;font-weight:600;flex:1 1 220px;min-width:0;max-width:100%}
+  .xp-controls select{min-width:0;width:100%;max-width:100%}
+  .xp-controls #xpSwap{flex:0 0 auto}
+  .xp-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px}
+  .xp-legend .item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+  .hm-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  .pitch-line{stroke:var(--axis);stroke-width:1;fill:none;opacity:.5}
+  .chip.toggle{margin-left:6px}
+  .chip.toggle[aria-pressed="true"]{background:var(--c6);border-color:var(--c6);color:#fff}
+  /* radar */
+  .radar-wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+  .radar-controls{display:flex;flex-direction:column;gap:10px;flex:0 1 240px;min-width:0;max-width:100%}
+  .radar-pick{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0}
+  .radar-pick .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .radar-pick select{flex:1 1 auto;width:100%;min-width:0;max-width:100%}
+  .radar-svg{flex:1 1 320px;min-width:280px;max-width:100%}
+  /* team bars */
+  .tbar-row{display:grid;grid-template-columns:140px 1fr 52px;align-items:center;gap:10px;padding:2.5px 0}
+  .tbar-lab{font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbar-track{height:20px;position:relative}
+  .tbar-fill{height:100%;background:var(--series-1);border-radius:0 5px 5px 0;transition:width .5s}
+  .tbar-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  /* table view */
+  .tableview{overflow-x:auto;margin-top:10px;display:none}
+  .tableview.show{display:block}
+  table{border-collapse:collapse;font-size:12.5px;width:100%}
+  th,td{text-align:right;padding:5px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+  th{color:var(--muted);font-weight:600;cursor:pointer}
+  td{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+  .runmix-row{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:10px;padding:3px 0}
+  .runmix-lab{font-size:12.5px;color:var(--ink-2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .runbar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid)}
+  .runseg{height:100%;border-right:2px solid var(--surface);cursor:pointer}
+  .runseg:last-child{border-right:none}
+  /* leaderboard */
+  .formula{display:inline-block;background:var(--surface);border:1px solid var(--border);
+    border-radius:6px;padding:1px 7px;font-size:13px;white-space:nowrap}
+  .weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 22px;margin-bottom:12px}
+  .wctl{display:flex;flex-direction:column;gap:3px}
+  .wctl .top{display:flex;justify-content:space-between;align-items:baseline;font-size:13px}
+  .wctl .top .nm{font-weight:600}
+  .wctl .top .nm .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  .wctl .top .pc{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:700}
+  .wctl input[type=range]{width:100%;accent-color:var(--series-1)}
+  .lb-modes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+  .lb-modes .lab{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-right:2px}
+  .lb-note{font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--muted);border-radius:8px;padding:9px 12px;margin:14px 0 4px}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--c2);background:color-mix(in srgb,var(--c2) 14%,transparent);
+    border:1px solid color-mix(in srgb,var(--c2) 35%,transparent);border-radius:999px;padding:2px 9px;vertical-align:middle;text-transform:none}
+  .sh-row{display:grid;grid-template-columns:150px 1fr 74px;align-items:center;gap:12px;padding:4px 0}
+  .sh-lab{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:8px;min-width:0}
+  .sh-lab span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sh-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid)}
+  .sh-seg{height:100%}
+  .sh-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .sh-val .g{color:var(--good);font-weight:700}
+  @media (max-width:560px){.sh-row{grid-template-columns:104px 1fr 64px}}
+  .weights.dim{opacity:.4;pointer-events:none}
+  .wgroup{grid-column:1/-1;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    font-weight:700;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+  .wgroup:first-child{margin-top:0;padding-top:0;border-top:none}
+  .wgroup .tag{color:var(--c6);font-weight:700}
+  .pf-scopediv{align-self:stretch;display:flex;align-items:center;padding:0 2px;
+    font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);
+    border-left:1px dashed var(--border);text-transform:uppercase;white-space:nowrap}
+  .lb-row{display:grid;grid-template-columns:34px minmax(120px,1.4fr) 1fr 44px;align-items:center;gap:12px;
+    padding:6px 8px;border-radius:9px;cursor:pointer;transition:background .12s}
+  .lb-row:hover{background:color-mix(in srgb,var(--series-1) 8%,transparent)}
+  .lb-row.head{cursor:default;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding-bottom:2px}
+  .lb-row.head:hover{background:none}
+  .lb-rank{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+  .lb-rank .up{color:var(--good);font-size:11px}
+  .crest{flex:0 0 auto;display:block;user-select:none}
+  .crest.logo{object-fit:contain}
+  .lb-name{display:flex;flex-direction:row;align-items:center;gap:9px;min-width:0}
+  .lb-nametext{display:flex;flex-direction:column;min-width:0}
+  .lb-name .n{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-name .m{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lb-bar{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--grid);width:100%}
+  .lb-seg{height:100%}
+  .lb-score{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .lb-more{margin-top:10px;text-align:center}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+  .toolrow{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
+  @media (max-width:560px){
+    .pf-row{grid-template-columns:110px 1fr 40px}
+    .pf-lab{font-size:12px}
+    .combo{flex:1 1 100%}
+    .tbar-row{grid-template-columns:104px 1fr 46px}
+    .runmix-row{grid-template-columns:96px 1fr}
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">SkillCorner × PySport · Open Broadcast Tracking Data</div>
+    <h1>A-League 2024/25 — Season Explorer</h1>
+    <p class="sub">Physical output, passing quality and off-ball movement for every player with 60+ minutes in
+      Australia's top flight, built from SkillCorner's season aggregates. All rate stats are normalised
+      (physical per match; passing &amp; runs per 30 minutes in possession).</p>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="filters">
+    <span class="lab">Position</span>
+    <div class="chips" id="posChips"></div>
+    <span class="lab" style="margin-left:auto">Min matches</span>
+    <input id="minMatches" type="range" min="1" max="20" value="3" style="width:120px">
+    <span id="minMatchesV" style="font-size:13px;color:var(--ink-2);width:2ch">3</span>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <section id="lb-section">
+    <div class="sec-head">
+      <h2>The SkillCorner Score — a FIFA-style rating</h2>
+      <p>One number per player, <strong>0–100</strong>, built from position-relative silos — each a weighted blend of
+        metrics ranked as percentiles <em>within the player's position</em>, combined
+        <strong>weighted by position</strong> by default (a striker leans on Creation &amp; Movement, a centre-back on
+        Physical &amp; Passing) or with your own weights. All <strong>eight silos</strong> are always in play — the same set
+        as the radar below. Pace/Physical/Passing/Creation/Movement come from the full-season aggregates;
+        <strong>Shooting · Defending · Dribbling</strong> come from the 10 tracked matches, so the ranking covers the
+        players who feature in them.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-lb"></div>
+      <div class="lb-modes" id="lbModes"></div>
+      <div class="weights" id="weights"></div>
+      <div class="legend" id="lbLegend"></div>
+      <div id="leaderboard"></div>
+      <div class="caption" id="lbElig"></div>
+      <div class="lb-note" id="lbNote">
+        <strong>Scope:</strong> Pace/Physical/Passing/Creation/Movement are full-season aggregates (percentiled within
+        position); <b>Shooting</b>, <b>Defending</b> and <b>Dribbling</b> are from the 10 tracked matches (volume over
+        the sample, percentiled league-wide). The ranking therefore covers players who feature in those matches. No xG
+        exists in the open data.
+      </div>
+      <div class="caption" id="lbElig-note">Eligibility: 3+ matches (use the “Min matches” filter above) and data in
+        all eight silos. Click any row to load that player's profile below.</div>
+    </div>
+  </section>
+
+  <!-- SHOOTING (sample) -->
+  <section id="shooting-section">
+    <div class="sec-head">
+      <h2>Shooting &amp; finishing <span class="badge">10-match sample</span></h2>
+      <p>The season aggregates have no shots — but the per-match <em>dynamic events</em> do (a possession
+        ending in a shot). This covers only the 10 tracked matches (~38% of the roster) and has
+        <strong>no xG</strong>, so it's shot <em>volume &amp; goals</em>, kept separate from the season score above.
+        Filtered by position.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-shoot"></div>
+      <div class="legend" id="shotLegend"></div>
+      <div id="shooting"></div>
+      <div class="caption">“Apps” = tracked matches the player featured in. Goals = shots whose possession led to a goal.</div>
+    </div>
+  </section>
+
+  <!-- ATHLETIC SCATTER -->
+  <section>
+    <div class="sec-head">
+      <h2>The athletic map</h2>
+      <p>Peak sprint speed against work rate (metres covered per minute). Top-right players are
+        both fast and relentless. Filter by position above; hover any dot for detail.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-ath"></div>
+      <div class="toolrow">
+        <div class="legend" id="scatterLegend"></div>
+        <button class="toolbtn" data-table="athletic" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-wrap"><svg id="athletic"></svg></div>
+      <div class="tableview" id="athletic-table"></div>
+      <div class="caption">Peak sprint speed = PSV99 (99th-percentile of a player's short-window speeds), in km/h.</div>
+    </div>
+  </section>
+
+  <!-- PASSING SCATTER -->
+  <section>
+    <div class="sec-head">
+      <h2>Passers: volume, security &amp; risk</h2>
+      <p>Pass volume against completion rate. Colour shows whether a player completes <em>more</em> than
+        expected given pass difficulty (blue) or <em>fewer</em> (red) — SkillCorner's xPass model sets the bar.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-pass"></div>
+      <div class="toolrow">
+        <div class="legend" id="passLegend"></div>
+        <button class="toolbtn" data-table="passing" aria-pressed="false">Table</button>
+      </div>
+      <div class="chart-wrap"><svg id="passing"></svg></div>
+      <div class="tableview" id="passing-table"></div>
+    </div>
+  </section>
+
+  <!-- SCATTER EXPLORER -->
+  <section id="explore-section">
+    <div class="sec-head">
+      <h2>Scatter explorer — find your own nuggets</h2>
+      <p>Plot <strong>any metric against any other</strong> — one dot per player, coloured by position. Pick a
+        <strong>silo tab</strong> to narrow the axis menus to that silo's metrics, then choose the metric for each axis
+        (your picks stick when you switch tabs, so you can cross silos — e.g. Pace on X, Defending on Y). Filtered by
+        position above; hover a dot for detail, click it to open that player's card.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-explore"></div>
+      <div class="silo-tabs" id="xpTabs"></div>
+      <div class="xp-controls">
+        <label>X axis<select id="xpX"></select></label>
+        <label>Y axis<select id="xpY"></select></label>
+        <button class="toolbtn" id="xpSwap" title="Swap the axes">⇄ swap</button>
+      </div>
+      <div class="xp-legend" id="xpLegend"></div>
+      <div class="chart-wrap"><svg id="explore"></svg></div>
+      <div class="caption" id="xpCap"></div>
+    </div>
+  </section>
+
+  <!-- PLAYER PROFILE -->
+  <section id="pf-section">
+    <div class="sec-head">
+      <h2>Player card &amp; profile</h2>
+      <p>The eight silo faces (like a FIFA card) plus the percentile detail behind them. Each bar's centre line is the
+        median (of positional peers, or of all teams in Team view); right (blue) is above average, left (red) below.
+        Use the <strong>View</strong> toggle up top to switch between a player card and a team card.</p>
+    </div>
+    <div class="card">
+      <div class="toolrow">
+        <div class="combo" id="pfCombo">
+          <input id="playerSearch" type="search" placeholder="Search player…" autocomplete="off"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list">
+          <div class="combo-list" id="playerListBox" role="listbox"></div>
+          <select id="playerSelect" hidden></select>
+        </div>
+        <span id="peerCount" style="font-size:12.5px;color:var(--muted)"></span>
+      </div>
+      <div class="vmount" id="view-profile"></div>
+      <div class="pf-head" id="pfHead"></div>
+      <div class="pf-faces" id="pfFaces"></div>
+      <div class="profile-grid" id="profile"></div>
+    </div>
+  </section>
+
+  <!-- ACTION HEAT-MAPS -->
+  <section id="heat-section">
+    <div class="sec-head">
+      <h2>Action heat-maps <span class="badge">10-match sample</span></h2>
+      <p>Where a player (or squad) operates across the 10 tracked matches — <strong>on-ball touches</strong>,
+        <strong>defensive engagements</strong> and <strong>off-ball runs</strong>. Pitch is attacking
+        <strong>left → right</strong>. Sample only, so it's a texture of tendencies, not a full-season map.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-heat"></div>
+      <div class="hm-controls">
+        <input id="hmSearch" type="search" placeholder="Search…" list="hmList" autocomplete="off">
+        <datalist id="hmList"></datalist>
+        <select id="hmSelect"></select>
+        <div class="vseg" id="hmLayers"></div>
+      </div>
+      <div class="chart-wrap"><svg id="heat"></svg></div>
+      <div class="caption" id="hmCap"></div>
+    </div>
+  </section>
+
+  <!-- COMPARE (radar) -->
+  <section id="compare-section">
+    <div class="sec-head">
+      <h2>Compare players — silo radar</h2>
+      <p>Two players across every silo (percentile within position, 0–100). Turn on the 10-match toggle in the
+        leaderboard above to add the Shooting / Defending / Dribbling axes.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-radar"></div>
+      <div class="radar-wrap">
+        <div class="radar-controls">
+          <div class="radar-pick"><span class="sw" style="background:var(--c1)"></span><select id="radarA"></select></div>
+          <div class="radar-pick"><span class="sw" style="background:var(--c2)"></span><select id="radarB"></select></div>
+          <div class="caption" style="margin-top:2px">Switch between comparing two players or two teams.</div>
+        </div>
+        <div class="radar-svg"><svg id="radar"></svg></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RUN MIX -->
+  <section>
+    <div class="sec-head">
+      <h2>How the top runners move</h2>
+      <p>The 14 most active off-ball runners (per 30 min in possession) and the make-up of their runs
+        across six movement families. Filtered by position.</p>
+    </div>
+    <div class="card">
+      <div class="vmount" id="view-run"></div>
+      <div class="legend" id="runLegend"></div>
+      <div id="runMix"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>Data:</strong> SkillCorner &amp; PySport open broadcast tracking data — AUS A-League 2024/25 season aggregates
+      (Physical, Passing, Off-Ball Runs), filtered to performances of 60+ minutes.
+      Each player is shown in their primary position (most minutes). One row per player.</p>
+    <p>Built with the SkillCorner open dataset. Credit SkillCorner if you reuse this —
+      <a href="https://skillcorner.com">skillcorner.com</a>.</p>
+  </footer>
+</div>
+
+<div class="tt" id="tt"></div>
+
+<script>
+const PAYLOAD = __SEASON_DATA__;
+const DATA = PAYLOAD.players;
+const META = PAYLOAD.meta;
+// Shooting from the 10-match dynamic-events sample (keyed by player_id). Not
+// season-wide, no xG — kept separate from the season SkillCorner Score.
+const SAMPLE_PAYLOAD = __SAMPLE_SHOOTING__;
+const SAMPLE_SHOOTING = SAMPLE_PAYLOAD.players;
+const SAMPLE_META = SAMPLE_PAYLOAD.meta;              // {grid_cols,grid_rows,layers}
+DATA.forEach(d=>{d.shot=SAMPLE_SHOOTING[d.player_id]||null;});
+const RUN_FAMILIES = META.run_families;
+const METRICS = META.metrics;                          // metric registry (drill-down + explorer)
+const METRIC_BY_KEY = Object.fromEntries(METRICS.map(m=>[m.key,m]));
+const RUN_COLORS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+const SVGNS='http://www.w3.org/2000/svg';
+const fmt=(v,d=1)=>v==null?'—':(+v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const el=(t,a={},kids=[])=>{const e=document.createElementNS(t.startsWith('svg:')?SVGNS:'http://www.w3.org/1999/xhtml',t.replace('svg:',''));
+  for(const k in a){if(k==='text')e.textContent=a[k];else if(k==='html')e.innerHTML=a[k];else e.setAttribute(k,a[k]);}
+  (Array.isArray(kids)?kids:[kids]).forEach(c=>c&&e.appendChild(c));return e;};
+const S=(t,a={},kids=[])=>el('svg:'+t,a,kids);
+
+// ---------- player/team crest badges ----------
+// The open data has no photos and official club crests are trademarked, so each player/team
+// gets a self-drawn shield in the club's real colours + monogram — a clean, safe stand-in.
+const TEAM_COLOR={  // primary
+  'Adelaide United':'#E31837','Auckland':'#0A2A4A','Brisbane Roar':'#F58220','Central Coast':'#002B5C',
+  'Macarthur':'#1A1A1A','Melbourne City':'#6CABDD','Melbourne Victory':'#12223F','Newcastle Jets':'#1D2A5B',
+  'Perth Glory':'#4B2E83','Sydney FC':'#3AA0DA','WS Wanderers':'#BE1E2D','Wellington':'#FFD200','Western United':'#0E5A3C'};
+const TEAM_COLOR2={  // secondary (crest trim)
+  'Adelaide United':'#F9E200','Auckland':'#1E6FBF','Brisbane Roar':'#6E2B62','Central Coast':'#FDB913',
+  'Macarthur':'#C8102E','Melbourne City':'#0A2240','Melbourne Victory':'#C0C0C0','Newcastle Jets':'#E4002B',
+  'Perth Glory':'#F58220','Sydney FC':'#002D62','WS Wanderers':'#111111','Wellington':'#111111','Western United':'#111111'};
+function teamColor(t){return TEAM_COLOR[t]||'#64748b';}
+// Optional real club logos: drop licensed files in src/visualization/logos/ (named e.g.
+// sydney-fc.png) and the build embeds them here as data URIs, keyed by a club slug. When a
+// club has a file it's used; otherwise the drawn shield crest below is the fallback.
+const TEAM_LOGOS = __TEAM_LOGOS__;
+function _slug(t){return (t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function _textOn(hex){if(!hex||hex[0]!=='#')return '#fff';const c=hex.slice(1);
+  const r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)/255>0.62?'#141414':'#fff';}
+function _initials(d){const nm=(d.player_name||'').trim();
+  if(d.isTeam){const w=nm.split(/\s+/);return (w.length>1?w[0][0]+w[1][0]:nm.slice(0,2)).toUpperCase();}
+  const w=nm.split(/\s+/).filter(Boolean);
+  return ((w[0]?.[0]||'')+(w.length>1?w[w.length-1][0]:'')).toUpperCase();}
+// a real club logo if one was supplied, else an inline-SVG shield crest
+function avatar(d,size){size=size||30;
+  const lg=TEAM_LOGOS[_slug(d.team_short)];
+  if(lg){const im=el('img',{class:'crest logo',src:lg,alt:d.team_short||'',title:d.team_short||''});
+    im.style.width=im.style.height=size+'px';return im;}
+  const p=teamColor(d.team_short),s=TEAM_COLOR2[d.team_short]||'#ffffff',tc=_textOn(TEAM_COLOR[d.team_short]);
+  const svg=S('svg',{class:'crest',width:size,height:Math.round(size*1.08),viewBox:'0 0 40 43'});
+  svg.appendChild(el('svg:title',{text:d.team_short||''}));
+  svg.appendChild(S('path',{d:'M4 4 H36 V21 C36 31 29 37.5 20 41 C11 37.5 4 31 4 21 Z',
+    fill:p,stroke:s,'stroke-width':3,'stroke-linejoin':'round'}));
+  const t=S('text',{x:20,y:20,'text-anchor':'middle','dominant-baseline':'central',
+    fill:tc,'font-size':16,'font-weight':800,style:'font-family:inherit'});
+  t.textContent=_initials(d);svg.appendChild(t);
+  return svg;}
+
+// ---------- state ----------
+const state={positions:new Set(META.positions),minMatches:3};
+
+// ---------- KPIs ----------
+(function(){
+  const valid=DATA.filter(d=>d.top_speed!=null);
+  const fastest=valid.reduce((a,b)=>b.top_speed>a.top_speed?b:a);
+  const avgDist=DATA.reduce((s,d)=>s+(d.distance||0),0)/DATA.length;
+  const grinder=DATA.reduce((a,b)=>(b.m_per_min||0)>(a.m_per_min||0)?b:a);
+  const tiles=[
+    {v:META.n_players,l:'Players profiled',u:'60+ min'},
+    {v:META.n_teams,l:'A-League clubs'},
+    {v:'10',l:'Matches with full tracking'},
+    {v:fmt(fastest.top_speed,1),l:'Fastest sprint · '+fastest.player_short_name,u:'km/h'},
+    {v:fmt(avgDist/1000,1),l:'Avg distance / match',u:'km'},
+  ];
+  const box=document.getElementById('kpis');
+  tiles.forEach(t=>box.appendChild(el('div',{class:'kpi'},[
+    el('div',{class:'v',html:t.v+(t.u?` <span class="u">${t.u}</span>`:'')}),
+    el('div',{class:'l',text:t.l})
+  ])));
+})();
+
+// ---------- filter chips ----------
+(function(){
+  const box=document.getElementById('posChips');
+  META.positions.forEach(p=>{
+    const c=el('button',{class:'chip','aria-pressed':'true',text:p});
+    c.onclick=()=>{state.positions.has(p)?state.positions.delete(p):state.positions.add(p);
+      if(state.positions.size===0)state.positions.add(p);
+      c.setAttribute('aria-pressed',state.positions.has(p));renderAll();};
+    box.appendChild(c);
+  });
+  const mm=document.getElementById('minMatches');
+  mm.oninput=()=>{state.minMatches=+mm.value;document.getElementById('minMatchesV').textContent=mm.value;renderAll();};
+})();
+const filtered=()=>DATA.filter(d=>state.positions.has(d.position_group)&&d.matches>=state.minMatches);
+
+// ---------- tooltip ----------
+const tt=document.getElementById('tt');
+function showTip(html,ev){tt.innerHTML=html;tt.style.opacity=1;moveTip(ev);}
+function moveTip(ev){const p=12,w=tt.offsetWidth,h=tt.offsetHeight;
+  let x=ev.clientX+p,y=ev.clientY+p;
+  if(x+w>innerWidth-8)x=ev.clientX-w-p; if(y+h>innerHeight-8)y=ev.clientY-h-p;
+  tt.style.left=x+'px';tt.style.top=y+'px';}
+function hideTip(){tt.style.opacity=0;}
+
+// ---------- generic scatter ----------
+function scatter(svgId, rows, {x,y,xlab,ylab,color,fill,label,tip,size,onclick}){
+  const svg=document.getElementById(svgId);svg.textContent='';
+  const W=Math.min(svg.parentElement.clientWidth||900,1040),H=Math.round(W*0.56);
+  const m={l:52,r:18,t:12,b:46};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const xs=rows.map(x),ys=rows.map(y).filter(v=>v!=null);
+  const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+  const px=W-m.r,py0=H-m.b;
+  const padX=(xmax-xmin)*0.05||1,padY=(ymax-ymin)*0.08||1;
+  const X=v=>m.l+((v-(xmin-padX))/((xmax+padX)-(xmin-padX)))*(px-m.l);
+  const Y=v=>py0-((v-(ymin-padY))/((ymax+padY)-(ymin-padY)))*(py0-m.t);
+  const g=S('g');svg.appendChild(g);
+  const ticks=(a,b,n=5)=>{const step=(b-a)/n,out=[];for(let i=0;i<=n;i++)out.push(a+step*i);return out;};
+  // grid + axes
+  ticks(ymin-padY,ymax+padY).forEach(t=>{
+    g.appendChild(S('line',{class:'gridline',x1:m.l,x2:px,y1:Y(t).toFixed(1),y2:Y(t).toFixed(1)}));
+    g.appendChild(S('text',{class:'axis',x:m.l-8,y:(Y(t)+3).toFixed(1),'text-anchor':'end',text:fmt(t,0)}));
+  });
+  ticks(xmin-padX,xmax+padX).forEach(t=>{
+    g.appendChild(S('text',{class:'axis',x:X(t).toFixed(1),y:py0+18,'text-anchor':'middle',text:fmt(t,0)}));
+  });
+  g.appendChild(S('line',{class:'baseline',x1:m.l,x2:px,y1:py0,y2:py0}));
+  g.appendChild(S('line',{class:'baseline',x1:m.l,x2:m.l,y1:m.t,y2:py0}));
+  g.appendChild(S('text',{class:'axis-title',x:(m.l+px)/2,y:H-8,'text-anchor':'middle',text:xlab}));
+  g.appendChild(S('text',{class:'axis-title',transform:`translate(14,${(m.t+py0)/2}) rotate(-90)`,'text-anchor':'middle',text:ylab}));
+  // dots
+  const labeled=label?label(rows):[];
+  rows.forEach(d=>{
+    if(y(d)==null||x(d)==null)return;
+    const r=size?size(d):5.5;
+    const c=S('circle',{class:'dot',cx:X(x(d)).toFixed(1),cy:Y(y(d)).toFixed(1),r:r.toFixed(1),fill:fill(d)});
+    c.addEventListener('mouseenter',ev=>{showTip(tip(d),ev);c.setAttribute('r',(r+2).toFixed(1));});
+    c.addEventListener('mousemove',moveTip);
+    c.addEventListener('mouseleave',()=>{hideTip();c.setAttribute('r',r.toFixed(1));});
+    if(onclick){c.style.cursor='pointer';c.addEventListener('click',()=>onclick(d));}
+    g.appendChild(c);
+  });
+  labeled.forEach(d=>{if(y(d)==null)return;
+    const cx=X(x(d)),cy=Y(y(d));
+    const nm=d.player_short_name.length>18?d.player_short_name.split(' ')[0]:d.player_short_name;
+    const flip=cx>px-140;   // near right edge -> place label to the left
+    g.appendChild(S('text',{class:'dlabel',
+      x:(flip?cx-9:cx+9).toFixed(1),y:(cy+4).toFixed(1),
+      'text-anchor':flip?'end':'start',text:nm}));});
+}
+
+// ---------- ATHLETIC ----------
+function renderAthletic(){
+  const rows=poolFor('ath').filter(d=>d.top_speed!=null&&d.m_per_min!=null);
+  const top=SECVIEW.ath==='teams'?rows:[...rows].sort((a,b)=>(b.top_speed+b.m_per_min/10)-(a.top_speed+a.m_per_min/10)).slice(0,6);
+  scatter('athletic',rows,{
+    x:d=>d.top_speed,y:d=>d.m_per_min,
+    xlab:'Peak sprint speed (km/h) →',ylab:'Work rate (m / min) →',
+    fill:()=>'var(--series-1)',
+    label:()=>top,
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short}</div>
+      <div class="row"><span>Peak speed</span><b>${fmt(d.top_speed)} km/h</b></div>
+      <div class="row"><span>Work rate</span><b>${fmt(d.m_per_min)} m/min</b></div>
+      <div class="row"><span>Distance</span><b>${fmt(d.distance/1000,1)} km</b></div>
+      <div class="row"><span>Sprints</span><b>${fmt(d.sprints)}</b></div>`
+  });
+  document.getElementById('scatterLegend').innerHTML=
+    `<span class="item"><span class="swatch" style="background:var(--series-1)"></span>Player (60+ min)</span>
+     <span class="item" style="color:var(--muted)">Labelled: top all-round athletes in view</span>`;
+  buildTable('athletic-table',rows,[
+    ['Player',d=>d.player_short_name],['Team',d=>d.team_short],['Pos',d=>d.position_group],
+    ['Speed',d=>fmt(d.top_speed)],['m/min',d=>fmt(d.m_per_min)],['Dist km',d=>fmt(d.distance/1000)],
+    ['Sprints',d=>fmt(d.sprints)]],3);
+}
+
+// ---------- PASSING ----------
+function passColor(over){ // diverging blue(+) <-> red(-)
+  const t=Math.max(-1,Math.min(1,over/8));
+  if(Math.abs(t)<0.08)return 'var(--mid)';
+  return t>0?`color-mix(in srgb, var(--pos) ${Math.round(35+t*65)}%, var(--mid))`
+            :`color-mix(in srgb, var(--neg) ${Math.round(35-t*65)}%, var(--mid))`;
+}
+function renderPassing(){
+  const rows=poolFor('pass').filter(d=>d.pass_vol!=null&&d.pass_pct!=null);
+  const top=SECVIEW.pass==='teams'?rows:[...rows].sort((a,b)=>b.pass_vol-a.pass_vol).slice(0,5)
+    .concat([...rows].sort((a,b)=>b.pass_over-a.pass_over).slice(0,3));
+  scatter('passing',rows,{
+    x:d=>d.pass_vol,y:d=>d.pass_pct,
+    xlab:'Passes attempted per 30 min in possession →',ylab:'Completion % →',
+    fill:d=>passColor(d.pass_over),
+    label:()=>[...new Set(top)],
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short}</div>
+      <div class="row"><span>Pass volume</span><b>${fmt(d.pass_vol)}</b></div>
+      <div class="row"><span>Completion</span><b>${fmt(d.pass_pct)}%</b></div>
+      <div class="row"><span>vs expected</span><b>${d.pass_over>0?'+':''}${fmt(d.pass_over)}%</b></div>
+      <div class="row"><span>Line breaks</span><b>${fmt(d.linebreaks)}</b></div>`
+  });
+  document.getElementById('passLegend').innerHTML=
+    `<span class="item">Completes vs expected:</span>
+     <span class="item"><span class="swatch" style="background:var(--neg)"></span>below</span>
+     <span class="item"><span class="swatch" style="background:var(--mid);border:1px solid var(--border)"></span>as expected</span>
+     <span class="item"><span class="swatch" style="background:var(--pos)"></span>above</span>`;
+  buildTable('passing-table',rows,[
+    ['Player',d=>d.player_short_name],['Team',d=>d.team_short],['Pos',d=>d.position_group],
+    ['Vol/30',d=>fmt(d.pass_vol)],['Comp%',d=>fmt(d.pass_pct)],['vs xP',d=>(d.pass_over>0?'+':'')+fmt(d.pass_over)],
+    ['LineBrk',d=>fmt(d.linebreaks)],['Danger',d=>fmt(d.dangerous_passes)]],4);
+}
+
+// ---------- TABLE builder ----------
+function buildTable(id,rows,cols,sortCol){
+  const box=document.getElementById(id);box.innerHTML='';
+  const t=el('table');const thead=el('tr');
+  cols.forEach((c,i)=>{const th=el('th',{text:c[0]});th.onclick=()=>{sortState[id]=(sortState[id]&&sortState[id].i===i)?{i,dir:-sortState[id].dir}:{i,dir:-1};draw();};thead.appendChild(th);});
+  t.appendChild(el('thead',{},thead));const tb=el('tbody');t.appendChild(tb);box.appendChild(t);
+  function draw(){tb.innerHTML='';let rs=[...rows];const ss=sortState[id];
+    if(ss){const f=cols[ss.i][1];rs.sort((a,b)=>{const va=f(a),vb=f(b),na=parseFloat(String(va).replace(/[^\d.-]/g,'')),nb=parseFloat(String(vb).replace(/[^\d.-]/g,''));
+      return (isNaN(na)||isNaN(nb))?String(va).localeCompare(String(vb))*ss.dir:(na-nb)*ss.dir;});}
+    rs.forEach(d=>{const tr=el('tr');cols.forEach(c=>tr.appendChild(el('td',{text:c[1](d)})));tb.appendChild(tr);});}
+  sortState[id]={i:sortCol,dir:-1};draw();
+}
+const sortState={};
+document.querySelectorAll('[data-table]').forEach(b=>{
+  b.onclick=()=>{const id=b.dataset.table+'-table';const sv=document.getElementById(b.dataset.table);
+    const on=b.getAttribute('aria-pressed')==='true';b.setAttribute('aria-pressed',!on);
+    document.getElementById(id).classList.toggle('show',!on);sv.style.display=on?'block':'none';
+    sv.previousElementSibling; };
+});
+
+// ---------- PLAYER PROFILE ----------
+let pfSilo=null;        // null = overview of all silos; a silo name = deep-dive drill-down
+let pfUniverse=[];      // current combobox universe (players, or teams in Team view)
+function samplePeers(team){return (team?teamEntities():DATA).filter(x=>x.shot);}
+function currentEntity(){
+  const universe=SECVIEW.profile==='teams'?teamEntities():DATA;
+  const v=document.getElementById('playerSelect').value;
+  return universe.find(p=>String(p.player_id)===String(v))||universe[0];
+}
+function renderProfile(){
+  const team=SECVIEW.profile==='teams';
+  const d=currentEntity();if(!d)return;
+  const peers=team?teamEntities():DATA.filter(p=>p.position_group===d.position_group);
+  document.getElementById('peerCount').textContent=team?`vs ${peers.length} teams`:`vs ${peers.length} ${d.position_group}s`;
+  const head=document.getElementById('pfHead');head.innerHTML='';
+  head.appendChild(avatar(d,44));
+  head.appendChild(el('div',{class:'pf-headtext'},[
+    el('span',{class:'name',text:d.player_name}),
+    el('span',{class:'meta',text:team?`${d.players} players (60+ min)`
+      :`${d.position_group} · ${d.team_short} · ${d.matches} matches · ${fmt(d.minutes,0)} min/match`})]));
+  // keep the search box in sync with the selected entity (unless the user is typing in it)
+  const inp=document.getElementById('playerSearch');
+  if(document.activeElement!==inp)inp.value=comboLabel(d);
+  // FIFA-style faces: canonical OVR + the eight silo faces (clicking deconstructs that silo)
+  const faces=document.getElementById('pfFaces');faces.innerHTML='';
+  const ovr=team?d._overall:positionOverall(d);   // always the weighted total, never a single silo
+  faces.appendChild(el('div',{class:'pf-ovr'},[
+    el('div',{class:'big',text:ovr==null?'—':Math.round(ovr)}),
+    el('div',{class:'lbl',text:'OVR'})]));
+  ALL_NAMES.forEach(s=>{
+    const sample=SAMPLE_NAMES.includes(s);
+    if(s===SAMPLE_NAMES[0])faces.appendChild(el('div',{class:'pf-scopediv',html:'10-match<br>sample →'}));
+    const v=d['silo__'+s];const avail=v!=null;
+    const bar=el('div',{class:'fbar'});const fill=el('i');
+    fill.style.width=(avail?v:0)+'%';fill.style.background=avail?SILO_COLORS[s]:'var(--grid)';bar.appendChild(fill);
+    const face=el('div',{class:'pf-face'+(sample?' sample':'')+(pfSilo===s?' active':''),role:'button',tabindex:'0',
+      title:'Click to deconstruct this silo'},[
+      el('div',{class:'fv',text:avail?Math.round(v):'—',style:`color:${avail?SILO_COLORS[s]:'var(--muted)'}`}),
+      el('div',{class:'fl',html:s+(sample?' <span style="opacity:.55">*</span>':'')}),bar]);
+    face.onclick=()=>{pfSilo=(pfSilo===s?null:s);renderProfile();};
+    face.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();face.onclick();}};
+    faces.appendChild(face);
+  });
+  faces.appendChild(el('div',{class:'pf-na',html:
+    (d.shot?'* 10-match sample':'* needs 10-match sample')+'<br>no per-shot xG'}));
+  renderProfileDetail(d,peers,team);
+}
+function renderProfileDetail(d,peers,team){
+  const box=document.getElementById('profile');box.innerHTML='';
+  const sp=samplePeers(team);
+  if(!pfSilo){
+    // OVERVIEW — one compact percentile bar per scoring metric, grouped by silo
+    box.appendChild(el('div',{class:'dd-hint',html:'Percentile vs peers for each scoring metric. <b>Click a silo face above</b> to deconstruct it — its full metric set, each with its own distribution.'}));
+    ALL_NAMES.forEach(silo=>{
+      const sample=SAMPLE_NAMES.includes(silo);const sv=d['silo__'+silo];
+      box.appendChild(el('div',{class:'pf-group'},[
+        el('span',{html:`<span style="color:${SILO_COLORS[silo]}">■</span> ${silo}${sample?' <span class="tag-s">10-match</span>':''}`}),
+        el('span',{class:'pf-siloscore',text:sv==null?'—':Math.round(sv),style:`color:${sv==null?'var(--muted)':SILO_COLORS[silo]}`}),
+      ]));
+      METRICS.filter(m=>m.silo===silo&&m.scoring).forEach(m=>{
+        const usePeers=m.src==='sample'?sp:peers;const p=metricPct(m.key,d,usePeers);
+        const row=el('div',{class:'pf-row'});
+        row.appendChild(el('div',{class:'pf-lab',text:m.label}));
+        const track=el('div',{class:'pf-track'});track.appendChild(el('div',{class:'pf-mid'}));
+        if(p!=null){const above=p>=50,half=Math.abs(p-50);const fill=el('div',{class:'pf-fill'});
+          fill.style.background=above?'var(--pos)':'var(--neg)';fill.style.width=half+'%';fill.style.left=above?'50%':(50-half)+'%';track.appendChild(fill);}
+        row.appendChild(track);
+        row.appendChild(el('div',{class:'pf-val',text:p==null?'—':Math.round(p),
+          style:`color:${p==null?'var(--muted)':p>=50?'var(--pos)':'var(--neg)'}`}));
+        box.appendChild(row);
+      });
+    });
+    return;
+  }
+  // DEEP-DIVE — small-multiples grid: one card per metric, each with its own distribution
+  const sample=SAMPLE_NAMES.includes(pfSilo);const scoreSet=ALL_SILOS[pfSilo];const sv=d['silo__'+pfSilo];
+  const head=el('div',{class:'dd-head'},[
+    el('div',{class:'dd-title',html:`<span style="color:${SILO_COLORS[pfSilo]}">■</span> Deconstructing <b style="color:${SILO_COLORS[pfSilo]}">${pfSilo}</b>${sample?' <span class="tag-s">10-match</span>':''} <span class="dd-score" style="color:${SILO_COLORS[pfSilo]}">${sv==null?'—':Math.round(sv)}</span>`}),
+    el('button',{class:'toolbtn',id:'ddAll',text:'← all silos'}),
+  ]);
+  box.appendChild(head);
+  head.querySelector('#ddAll').onclick=()=>{pfSilo=null;renderProfile();};
+  const mets=METRICS.filter(m=>m.silo===pfSilo).slice().sort((a,b)=>(b.scoring?1:0)-(a.scoring?1:0));
+  const grid=el('div',{class:'sm-grid'});box.appendChild(grid);
+  mets.forEach(m=>grid.appendChild(metricCard(m,d,m.src==='sample'?sp:peers,scoreSet&&scoreSet[m.key])));
+}
+// a small-multiple card: metric name, the player's value + percentile, and a mini histogram
+function metricCard(m,d,peers,weight){
+  const val=metricVal(d,m.key);const p=metricPct(m.key,d,peers);
+  const good=p==null?'var(--muted)':(p>=50?'var(--pos)':'var(--neg)');
+  const card=el('div',{class:'mc'});
+  const badge=weight?el('span',{class:'wt',title:`weight ×${weight} in the ${m.silo} score`,text:'×'+weight})
+    :(m.scoring?el('span',{class:'wt',title:`builds the ${m.silo} score`,text:'✓'}):null);
+  card.appendChild(el('div',{class:'mc-top'},[el('span',{class:'mc-lab',text:m.label}),badge]));
+  card.appendChild(el('div',{class:'mc-fig'},[
+    el('span',{class:'mc-val',text:fmtMetric(m.key,val)}),
+    el('span',{class:'mc-pct',text:p==null?'—':Math.round(p),style:`color:${good}`}),
+  ]));
+  const svg=S('svg',{class:'mc-hist'});card.appendChild(svg);
+  miniHist(svg,m,d,peers,val);
+  card.appendChild(el('div',{class:'mc-foot',text:p==null?'no peer data':`${p>=50?'top':'bottom'} ${p>=50?Math.round(100-p):Math.round(p)}% · pctl ${Math.round(p)}`}));
+  return card;
+}
+// histogram of peer values with the player's value marked; H defaults to a compact 46
+function miniHist(svg,m,d,peers,val,H){
+  H=H||46;const W=svg.parentElement?svg.parentElement.clientWidth||220:220;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);svg.textContent='';
+  const vals=peers.map(p=>metricVal(p,m.key)).filter(x=>x!=null);
+  if(!vals.length||val==null){svg.appendChild(S('text',{x:W/2,y:H/2+3,'text-anchor':'middle',class:'axis',text:'no peers'}));return;}
+  const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const N=Math.min(20,Math.max(6,Math.round(Math.sqrt(vals.length))));
+  const bins=new Array(N).fill(0);
+  vals.forEach(v=>{let i=Math.floor((v-min)/span*N);if(i>=N)i=N-1;if(i<0)i=0;bins[i]++;});
+  const bmax=Math.max(...bins);const pad=3,bw=(W-2*pad)/N,base=H-13;
+  const myBin=Math.min(N-1,Math.max(0,Math.floor((val-min)/span*N)));
+  bins.forEach((c,i)=>{const h=c/bmax*(base-4);
+    svg.appendChild(S('rect',{x:(pad+i*bw+0.6).toFixed(1),y:(base-h).toFixed(1),width:(bw-1.2).toFixed(1),height:h.toFixed(1),
+      rx:1.5,fill:i===myBin?SILO_COLORS[m.silo]:'var(--grid)'}));});
+  const mx=pad+((val-min)/span)*(W-2*pad);
+  svg.appendChild(S('line',{x1:mx.toFixed(1),x2:mx.toFixed(1),y1:2,y2:base,stroke:SILO_COLORS[m.silo],'stroke-width':2}));
+  svg.appendChild(S('circle',{cx:mx.toFixed(1),cy:3.5,r:3.2,fill:SILO_COLORS[m.silo]}));
+  svg.appendChild(S('text',{x:pad,y:H-2,class:'axis',text:fmt(min,0)}));
+  svg.appendChild(S('text',{x:W-pad,y:H-2,'text-anchor':'end',class:'axis',text:fmt(max,0)}));
+}
+// ----- searchable player/team picker (combobox with autocomplete) -----
+function comboLabel(d){return d.isTeam?d.player_name:`${d.player_name} — ${d.team_short}`;}
+function buildProfileOptions(){
+  const team=SECVIEW.profile==='teams';
+  pfUniverse=[...(team?teamEntities():DATA)].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  const sel=document.getElementById('playerSelect');sel.innerHTML='';
+  pfUniverse.forEach(d=>sel.appendChild(el('option',{value:d.player_id,text:d.player_name})));
+  const def=team?[...pfUniverse].sort((a,b)=>(b._overall??0)-(a._overall??0))[0]
+    :DATA.filter(d=>d.top_speed!=null).reduce((a,b)=>b.top_speed>a.top_speed?b:a);
+  sel.value=def.player_id;
+  const inp=document.getElementById('playerSearch');inp.placeholder=team?'Search team…':'Search player…';
+  inp.value=comboLabel(def);
+}
+function selectPlayer(id){
+  const d=pfUniverse.find(x=>String(x.player_id)===String(id));if(!d)return;
+  document.getElementById('playerSelect').value=id;
+  document.getElementById('playerSearch').value=comboLabel(d);
+  hideCombo();renderProfile();
+}
+function showCombo(){document.getElementById('playerListBox').classList.add('show');
+  document.getElementById('playerSearch').setAttribute('aria-expanded','true');}
+function hideCombo(){document.getElementById('playerListBox').classList.remove('show');
+  document.getElementById('playerSearch').setAttribute('aria-expanded','false');}
+function renderComboList(q){
+  const box=document.getElementById('playerListBox');box.innerHTML='';
+  const ql=q.trim().toLowerCase();
+  const matches=pfUniverse.filter(d=>!ql||d.player_name.toLowerCase().includes(ql)||(d.team_short||'').toLowerCase().includes(ql)).slice(0,40);
+  if(!matches.length){box.appendChild(el('div',{class:'combo-empty',text:'No match'}));showCombo();return;}
+  const cur=document.getElementById('playerSelect').value;
+  matches.forEach(d=>{const row=el('div',{class:'combo-row'+(String(d.player_id)===String(cur)?' on':''),role:'option'},
+    [avatar(d,22),el('span',{text:comboLabel(d)})]);
+    row.onmousedown=e=>{e.preventDefault();selectPlayer(d.player_id);};box.appendChild(row);});
+  showCombo();
+}
+function initProfile(){
+  buildProfileOptions();
+  const inp=document.getElementById('playerSearch');
+  inp.addEventListener('focus',()=>{inp.select();renderComboList('');});
+  inp.addEventListener('input',()=>renderComboList(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const first=document.querySelector('#playerListBox .combo-row');
+      if(first){e.preventDefault();first.dispatchEvent(new MouseEvent('mousedown'));}}
+    else if(e.key==='Escape'){hideCombo();inp.blur();}});
+  inp.addEventListener('blur',()=>setTimeout(hideCombo,150));
+}
+
+// ---------- VIEW MODE: players vs teams ----------
+// A team entity mirrors a player record's field names (minutes-weighted means of the rate
+// metrics + silo scores, summed shooting counts), so every graph can render teams by just
+// swapping its data source from filtered() to teamEntities() via pool().
+// Per-graph view state — each graph is independently Players or Teams.
+const SECVIEW={lb:'players',ath:'players',pass:'players',shoot:'players',run:'players',profile:'players',radar:'players',explore:'players',heat:'players'};
+let TEAMS=null;
+const TEAM_RATE=['top_speed','m_per_min','distance','sprints','hi_count','high_accel','high_decel','hsr_dist','expl_sprint',
+  'pass_vol','pass_pct','pass_over','xpass','linebreaks','dangerous_passes','pass_dist','pass_torun','pass_shot','pass_goal',
+  'runs','dangerous_runs','runs_received','runs_targeted','runs_box','run_shot',...RUN_FAMILIES.map(f=>'run__'+f)];
+function teamEntities(){
+  if(TEAMS)return TEAMS;
+  const by={};DATA.forEach(d=>{(by[d.team_short]??=[]).push(d);});
+  TEAMS=Object.entries(by).map(([team,ps])=>{
+    const w=p=>((p.minutes||0)*(p.matches||0))||1;
+    const wmean=f=>{let n=0,dn=0;ps.forEach(p=>{const v=p[f];if(v!=null){n+=w(p)*v;dn+=w(p);}});return dn?n/dn:null;};
+    const e={player_id:'team:'+team,player_short_name:team,player_name:team,team_short:team,
+      position_group:'Team',isTeam:true,players:ps.length,matches:99};
+    TEAM_RATE.forEach(f=>e[f]=wmean(f));
+    ALL_NAMES.forEach(s=>{e['silo__'+s]=wmean('silo__'+s);e['siloL__'+s]=wmean('siloL__'+s);});
+    e._overall=wmean_pos(ps,w);   // minutes-weighted mean of players' position-weighted overalls
+    const sp=ps.filter(p=>p.shot);
+    if(sp.length){const sum=f=>sp.reduce((a,p)=>a+(p.shot[f]||0),0);
+      const apps=Math.max(...sp.map(p=>p.shot.apps||0))||1;
+      const sh={apps:apps,shots_per_app:sum('shots')/apps};
+      SAMPLE_SUM.forEach(k=>sh[k]=sum(k));
+      for(const k in SAMPLE_DERIVED)sh[k]=SAMPLE_DERIVED[k](sh);
+      // squad action heat-map = element-wise sum of players' grids
+      const gsp=sp.filter(p=>p.shot.grid);
+      if(gsp.length){const g={};SAMPLE_META.layers.forEach(L=>{const n=gsp[0].shot.grid[L].length;
+        const arr=new Array(n).fill(0);gsp.forEach(p=>{const s=p.shot.grid[L];if(s)for(let i=0;i<n;i++)arr[i]+=s[i]||0;});
+        g[L]=arr;});sh.grid=g;}
+      e.shot=sh;}
+    return e;
+  });
+  return TEAMS;
+}
+function wmean_pos(ps,w){let n=0,dn=0;ps.forEach(p=>{const v=positionOverall(p);if(v!=null){n+=w(p)*v;dn+=w(p);}});return dn?n/dn:null;}
+function poolFor(key){return SECVIEW[key]==='teams'?teamEntities():filtered();}
+function entLabel(d){return d.isTeam?`${d.players} players`:`${d.position_group} · ${d.team_short} · ${d.matches} matches`;}
+// Build a small Players/Teams segmented control in each graph's mount, wired to a re-render.
+function mountViewToggle(mountId,key,rerender){
+  const host=document.getElementById(mountId);if(!host)return;
+  const seg=el('div',{class:'vseg'});seg.appendChild(el('span',{class:'lab',text:'View'}));
+  [['players','Players'],['teams','Teams']].forEach(([m,lab])=>{
+    const btn=el('button',{text:lab,'aria-pressed':String(SECVIEW[key]===m)});
+    btn.onclick=()=>{if(SECVIEW[key]===m)return;SECVIEW[key]=m;
+      [...seg.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===btn));rerender();};
+    seg.appendChild(btn);
+  });
+  host.appendChild(seg);
+}
+function initViewToggles(){
+  mountViewToggle('view-lb','lb',()=>{lbLimit=15;renderLeaderboard();});
+  mountViewToggle('view-ath','ath',renderAthletic);
+  mountViewToggle('view-pass','pass',renderPassing);
+  mountViewToggle('view-shoot','shoot',renderShooting);
+  mountViewToggle('view-run','run',renderRunMix);
+  mountViewToggle('view-profile','profile',()=>{buildProfileOptions();renderProfile();});
+  mountViewToggle('view-radar','radar',()=>{fillRadarPickers();renderRadar();});
+  mountViewToggle('view-explore','explore',()=>{fillExploreOptions();renderExplore();});
+  mountViewToggle('view-heat','heat',()=>{buildHeatOptions();renderHeat();});
+}
+
+// ---------- RUN MIX ----------
+function renderRunMix(){
+  const rows=poolFor('run').filter(d=>d.runs!=null).sort((a,b)=>b.runs-a.runs).slice(0,SECVIEW.run==='teams'?13:14);
+  const keys=RUN_FAMILIES.map(f=>'run__'+f);
+  const box=document.getElementById('runMix');box.innerHTML='';
+  rows.forEach(d=>{
+    const tot=keys.reduce((s,k)=>s+(d[k]||0),0)||1;
+    const row=el('div',{class:'runmix-row'});
+    row.appendChild(el('div',{class:'runmix-lab',text:d.player_short_name}));
+    const bar=el('div',{class:'runbar'});
+    RUN_FAMILIES.forEach((f,i)=>{
+      const val=d['run__'+f]||0;if(val<=0)return;
+      const seg=el('div',{class:'runseg'});
+      seg.style.width=(val/tot*100)+'%';seg.style.background=RUN_COLORS[i];
+      seg.addEventListener('mouseenter',ev=>showTip(
+        `<b>${d.player_short_name}</b><div class="pos">${f}</div>
+         <div class="row"><span>Runs/30</span><b>${fmt(val)}</b></div>
+         <div class="row"><span>Share</span><b>${fmt(val/tot*100,0)}%</b></div>`,ev));
+      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);
+      bar.appendChild(seg);
+    });
+    row.appendChild(bar);box.appendChild(row);
+  });
+  document.getElementById('runLegend').innerHTML=RUN_FAMILIES.map((f,i)=>
+    `<span class="item"><span class="swatch" style="background:${RUN_COLORS[i]}"></span>${f}</span>`).join('');
+}
+
+// ---------- SKILLCORNER SCORE (FIFA-style silos) ----------
+const SEASON_SILOS={
+  'Pace':{top_speed:3,sprints:2,expl_sprint:1.5,high_accel:1},
+  'Physical':{distance:2,m_per_min:2,hi_count:2,hsr_dist:1,high_decel:1},
+  'Passing':{pass_over:3,pass_pct:2,pass_vol:1,pass_dist:1},
+  'Creation':{dangerous_passes:2,linebreaks:2,pass_shot:2,pass_torun:1,pass_goal:1},
+  'Movement':{dangerous_runs:2,runs_received:2,run_shot:2,runs_targeted:1,runs_box:1,runs:1},
+};
+// Sample silos = single composite of raw sample TOTALS (volume), ranked LEAGUE-WIDE.
+const SAMPLE_SILOS={
+  'Shooting':{shotval_total:1},   // shots + 3*goals (volume drives it, goals worth more)
+  'Defending':{defval_total:1},   // 2*regains + disruptions + 0.5*pressures
+  'Dribbling':{dribval_total:1},  // take-ons (defenders beaten by the dribble), not raw carries
+};
+const LEAGUE_METRICS=new Set(['shotval_total','defval_total','dribval_total']);
+const ALL_SILOS={...SEASON_SILOS,...SAMPLE_SILOS};
+const SEASON_NAMES=Object.keys(SEASON_SILOS);
+const SAMPLE_NAMES=Object.keys(SAMPLE_SILOS);
+const ALL_NAMES=Object.keys(ALL_SILOS);
+const SILO_COLORS={Pace:'var(--c1)',Physical:'var(--c2)',Passing:'var(--c3)',Creation:'var(--c4)',
+  Movement:'var(--c5)',Shooting:'var(--c6)',Defending:'var(--c7)',Dribbling:'var(--c8)'};
+const POSITION_WEIGHTS={
+  'Central Defender':{Pace:1,Physical:2.5,Passing:2.5,Creation:0.5,Movement:0.5,Shooting:0.3,Defending:3,Dribbling:0.7},
+  'Full Back':{Pace:2,Physical:2,Passing:1.5,Creation:1.5,Movement:1.5,Shooting:0.5,Defending:2,Dribbling:1.5},
+  'Midfield':{Pace:1,Physical:1.5,Passing:2.5,Creation:2,Movement:1.5,Shooting:1,Defending:2,Dribbling:1.5},
+  'Wide Attacker':{Pace:2,Physical:1,Passing:1,Creation:2,Movement:2.5,Shooting:2,Defending:0.8,Dribbling:2.5},
+  'Center Forward':{Pace:1.5,Physical:1.5,Passing:1,Creation:2,Movement:2.5,Shooting:3,Defending:0.5,Dribbling:1.5},
+};
+// build the composite sample scores on each player (null when not in the sample).
+// Shooting/Dribbling are VOLUME TOTALS (sparse events — volume matters, a cameo rate can't
+// top them, zero output sits at the floor). Defending is a PER-APPEARANCE rate that weights
+// last-line defending — CLEARANCES and DANGER PREVENTED (which centre-backs & full-backs
+// lead) over raw ball-recovery volume (which pressing forwards lead). This is why real
+// defenders — centre-backs, full-backs, ball-winning midfielders — top Defending, and it
+// removes the games-played bias a raw total carries.
+DATA.forEach(d=>{const sh=d.shot;
+  d.shotval_total = sh?sh.shots + 3*sh.goals:null;
+  d.defval_total  = sh?(2*(sh.clearances||0) + 3*(sh.danger_prevented||0) + 0.5*sh.regains)/(sh.apps||1):null;
+  d.dribval_total = sh?sh.takeons:null;   // 1v1 take-ons (defenders beaten), not raw carries
+});
+// Weibull percentile rank/(n+1): the sample's best sits just under 100 (not exactly 100),
+// the worst just above 0 — a value is never claimed better than 100% of a wider population.
+function pctIn(vals,v){if(v==null||!vals.length)return null;
+  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);return ((lo+hi)/2+1)/(vals.length+1)*100;}
+// Precompute TWO consistent bases for every silo, so a leaderboard mix is never a mash-up
+// of different scales:
+//   silo__X  = WITHIN-position percentiles  → "how good for your role" (By position mode)
+//   siloL__X = LEAGUE-WIDE percentiles       → "best in absolute terms" (custom weights/archetypes)
+(function computeScores(){
+  const byPos={};DATA.forEach(d=>{(byPos[d.position_group]??=[]).push(d);});
+  const metrics=[...new Set(Object.values(ALL_SILOS).flatMap(o=>Object.keys(o)))];
+  metrics.forEach(m=>{
+    const vals=DATA.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);       // league-wide
+    DATA.forEach(r=>{r['pctL__'+m]=pctIn(vals,r[m]);});
+    for(const pos in byPos){const rows=byPos[pos];                          // within position
+      const pv=rows.map(r=>r[m]).filter(v=>v!=null).sort((a,b)=>a-b);
+      rows.forEach(r=>{r['pctW__'+m]=pctIn(pv,r[m]);});}
+  });
+  const blend=(d,s,pre)=>{let num=0,den=0;for(const m in ALL_SILOS[s]){const p=d[pre+m];
+    if(p!=null){num+=ALL_SILOS[s][m]*p;den+=ALL_SILOS[s][m];}}return den>0?num/den:null;};
+  DATA.forEach(d=>{ALL_NAMES.forEach(s=>{
+    d['silo__'+s]=blend(d,s,'pctW__');   // within-position (role-fit)
+    d['siloL__'+s]=blend(d,s,'pctL__');  // league-wide (absolute)
+  });});
+})();
+// ----- generic metric access (registry-driven) for drill-down + scatter explorer -----
+// Season metrics live on the player record; sample metrics live under d.shot.
+function metricVal(d,key){const m=METRIC_BY_KEY[key];if(!m)return null;
+  if(m.src==='sample')return d.shot?(d.shot[key]==null?null:d.shot[key]):null;
+  const v=d[key];return v==null?null:v;}
+const SAMPLE_KEYS=METRICS.filter(m=>m.src==='sample').map(m=>m.key);
+const SAMPLE_DERIVED={               // team-level rates recomputed from summed counts
+  conversion:t=>t.shots?t.goals/t.shots:null,
+  box_shot_pct:t=>t.shots?t.shots_box/t.shots*100:null,
+  def_success:t=>t.pressures?t.regains/t.pressures*100:null,
+  progcarry_pct:t=>t.carries?t.progcarries/t.carries*100:null,
+  elim_per_carry:t=>t.carries?t.opp_overtaken/t.carries:null,
+};
+const SAMPLE_SUM=SAMPLE_KEYS.filter(k=>!(k in SAMPLE_DERIVED));
+// number formatting per registry fmt
+function fmtMetric(key,v){if(v==null)return '—';const m=METRIC_BY_KEY[key];
+  if(!m)return fmt(v,1);
+  if(m.fmt==='int')return Math.round(v).toLocaleString();
+  if(m.fmt==='pct')return fmt(v,1)+'%';
+  if(m.fmt==='kmh')return fmt(v,1);
+  return fmt(v,1);}
+// good-oriented percentile of d among peers for a metric (respects better=-1)
+function metricPct(key,d,peers){const m=METRIC_BY_KEY[key];const v=metricVal(d,key);if(v==null)return null;
+  const vals=peers.map(p=>metricVal(p,key)).filter(x=>x!=null).sort((a,b)=>a-b);if(!vals.length)return null;
+  let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);let p=((lo+hi)/2+1)/(vals.length+1)*100;
+  return m&&m.better===-1?100-p:p;}
+let includeSample=true;                     // default to the full 8 silos (matches the radar)
+let scoreMode='role';                       // 'role' (position-aware) or 'custom'
+const customW={};ALL_NAMES.forEach(s=>customW[s]=1);
+function activeNames(){return includeSample?ALL_NAMES:SEASON_NAMES;}
+function balanced(){const o={};ALL_NAMES.forEach(s=>o[s]=1);return o;}
+function siloWeights(d){return scoreMode==='role'?(POSITION_WEIGHTS[d.position_group]||balanced()):customW;}
+// basis follows the mode: role → within-position (silo__), custom → league-wide (siloL__)
+function siloBasis(){return scoreMode==='role'?'silo__':'siloL__';}
+function siloVal(d,s){return d[siloBasis()+s];}
+function overallScore(d){
+  if(d.isTeam&&scoreMode==='role')return d._overall;   // teams have no position → use squad avg overall
+  const w=siloWeights(d);let num=0,den=0;
+  activeNames().forEach(s=>{const v=siloVal(d,s);if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
+function siloContribs(d){const w=siloWeights(d);const present=activeNames().filter(s=>siloVal(d,s)!=null);
+  const tot=present.reduce((a,s)=>a+w[s],0)||1;const o={};present.forEach(s=>o[s]=w[s]/tot*siloVal(d,s));return o;}
+// canonical OVR for the player card: always the POSITION-weighted total over all silos,
+// independent of whatever weighting/preset the leaderboard is currently set to.
+function positionOverall(d){const w=POSITION_WEIGHTS[d.position_group]||balanced();let num=0,den=0;
+  ALL_NAMES.forEach(s=>{const v=d['silo__'+s];if(v!=null){num+=w[s]*v;den+=w[s];}});return den>0?num/den:null;}
+// Archetype presets are silo-FOCUSED: the named silo(s) dominate so a player can't top
+// an archetype on unrelated strengths (a non-shooter can't be the top "Poacher").
+const LB_MODES={
+  'By position':null,
+  'Balanced':{Pace:1,Physical:1,Passing:1,Creation:1,Movement:1,Shooting:1,Defending:1,Dribbling:1},
+  'Poacher':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:10,Defending:0,Dribbling:0},
+  'Playmaker':{Pace:0,Physical:0,Passing:10,Creation:8,Movement:0,Shooting:0,Defending:0,Dribbling:0},
+  'Ball-winner':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:10,Dribbling:0},
+  'Dribbler':{Pace:0,Physical:0,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:0,Dribbling:10},
+  'Athlete':{Pace:10,Physical:10,Passing:0,Creation:0,Movement:0,Shooting:0,Defending:0,Dribbling:0},
+};
+let lbLimit=15;
+function renderLeaderboard(){
+  const names=activeNames();const team=SECVIEW.lb==='teams';
+  const elig=poolFor('lb').filter(d=>names.every(s=>d['silo__'+s]!=null));
+  elig.forEach(d=>d._score=overallScore(d));
+  elig.sort((a,b)=>b._score-a._score);
+  const box=document.getElementById('leaderboard');box.innerHTML='';
+  box.appendChild(el('div',{class:'lb-row head'},[
+    el('div',{class:'lb-rank',text:'#'}),el('div',{text:team?'Team':'Player'}),
+    el('div',{text:names.join(' · ')}),el('div',{class:'lb-score',text:'OVR'})]));
+  const lim=team?elig.length:lbLimit;
+  const show=elig.slice(0,lim);const maxS=show.length?show[0]._score:100;
+  show.forEach((d,i)=>{
+    const row=el('div',{class:'lb-row'});
+    row.appendChild(el('div',{class:'lb-rank',text:(i+1)}));
+    row.appendChild(el('div',{class:'lb-name'},[
+      avatar(d,32),
+      el('div',{class:'lb-nametext'},[
+        el('div',{class:'n',text:d.player_short_name}),
+        el('div',{class:'m',text:entLabel(d)})])]));
+    const bar=el('div',{class:'lb-bar'});const c=siloContribs(d);
+    names.forEach(s=>{const part=c[s]||0;if(part<=0)return;
+      const seg=el('div',{class:'lb-seg'});seg.style.width=(part/maxS*100)+'%';seg.style.background=SILO_COLORS[s];
+      seg.addEventListener('mouseenter',ev=>showTip(
+        `<b>${d.player_short_name}</b><div class="pos">${s} silo${SAMPLE_NAMES.includes(s)?' · 10-match':''} · ${scoreMode==='role'?'vs position':'league-wide'}</div>
+         <div class="row"><span>Silo score</span><b>${fmt(siloVal(d,s),0)}</b></div>
+         <div class="row"><span>Contribution</span><b>${fmt(c[s],1)}</b></div>`,ev));
+      seg.addEventListener('mousemove',moveTip);seg.addEventListener('mouseleave',hideTip);bar.appendChild(seg);});
+    row.appendChild(bar);
+    row.appendChild(el('div',{class:'lb-score',text:fmt(d._score,1)}));
+    row.onclick=()=>{const sel=document.getElementById('playerSelect');sel.value=d.player_id;renderProfile();
+      document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});};
+    box.appendChild(row);
+  });
+  const more=el('div',{class:'lb-more'});
+  if(!team&&lbLimit<elig.length){const b=el('button',{class:'toolbtn',text:`Show more (${elig.length-lbLimit})`});
+    b.onclick=()=>{lbLimit+=15;renderLeaderboard();};more.appendChild(b);}
+  if(!team&&lbLimit>15){const b=el('button',{class:'toolbtn',text:'Show less',style:'margin-left:8px'});
+    b.onclick=()=>{lbLimit=15;renderLeaderboard();};more.appendChild(b);}
+  box.appendChild(more);
+  const en=document.getElementById('lbElig');
+  const basisNote=scoreMode==='role'
+    ? 'Silos are percentiled within each position (role-fit), combined by position weights.'
+    : 'Silos are percentiled league-wide (absolute), so your custom mix compares every player on the same scale.';
+  if(en)en.textContent=(team
+    ?`Ranking ${elig.length} teams (squad averages; sample silos from the tracked games). `
+    :`Ranking ${elig.length} players in the 10-match sample (all 8 silos present). `)+basisNote;
+  const sumW=names.reduce((a,s)=>a+customW[s],0)||1;
+  names.forEach(s=>{const pc=document.getElementById('wpc-'+s);if(pc)pc.textContent=Math.round(customW[s]/sumW*100)+'%';});
+}
+function refreshWeightUI(){
+  ALL_NAMES.forEach(s=>{const ctl=document.getElementById('wctl-'+s);
+    if(ctl)ctl.style.display=(includeSample||SEASON_NAMES.includes(s))?'':'none';});
+  document.getElementById('lbLegend').innerHTML=activeNames().map(s=>
+    `<span class="item"><span class="swatch" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}</span>`).join('')
+    +`<span class="item" style="color:var(--muted)">${includeSample?'* 10-match sample · ':''}bar = weighted contribution</span>`;
+}
+(function buildScoreUI(){
+  const modes=document.getElementById('lbModes');
+  modes.appendChild(el('span',{class:'lab',text:'Weighting'}));
+  Object.keys(LB_MODES).forEach(name=>{
+    const c=el('button',{class:'chip mode',text:name,'aria-pressed':name==='By position'});
+    c.onclick=()=>{
+      [...modes.querySelectorAll('.chip.mode')].forEach(x=>x.setAttribute('aria-pressed',x===c));
+      if(LB_MODES[name]===null){scoreMode='role';}
+      else{scoreMode='custom';ALL_NAMES.forEach(s=>{customW[s]=LB_MODES[name][s]??1;
+        const sl=document.getElementById('w-'+s);if(sl)sl.value=Math.min(100,(LB_MODES[name][s]??1)*10);});}
+      document.getElementById('weights').classList.toggle('dim',scoreMode==='role');
+      renderLeaderboard();
+    };
+    modes.appendChild(c);
+  });
+  const box=document.getElementById('weights');
+  ALL_NAMES.forEach(s=>{
+    if(s===SEASON_NAMES[0])box.appendChild(el('div',{class:'wgroup',html:'Full season — all games'}));
+    if(s===SAMPLE_NAMES[0])box.appendChild(el('div',{class:'wgroup',html:'<span class="tag">10-match sample</span> — from the tracked games only'}));
+    const ctl=el('div',{class:'wctl',id:'wctl-'+s});
+    ctl.appendChild(el('div',{class:'top'},[
+      el('span',{class:'nm',html:`<span class="dot" style="background:${SILO_COLORS[s]}"></span>${s}${SAMPLE_NAMES.includes(s)?' *':''}`}),
+      el('span',{class:'pc',id:'wpc-'+s})]));
+    const r=el('input',{type:'range',min:'0',max:'100',value:'10',step:'5',id:'w-'+s});
+    r.oninput=()=>{customW[s]=(+r.value/10)||0.0001;scoreMode='custom';
+      [...document.querySelectorAll('#lbModes .chip.mode')].forEach(x=>x.setAttribute('aria-pressed',false));
+      document.getElementById('weights').classList.remove('dim');renderLeaderboard();};
+    ctl.appendChild(r);box.appendChild(ctl);
+  });
+  box.classList.add('dim');  // start role-based
+  refreshWeightUI();
+})();
+
+// ---------- SHOOTING (10-match sample) ----------
+(function shotPercentiles(){
+  const s=DATA.filter(d=>d.shot);const vals=s.map(d=>d.shot.shots_per_app).sort((a,b)=>a-b);
+  s.forEach(d=>{const v=d.shot.shots_per_app;let lo=vals.indexOf(v),hi=vals.lastIndexOf(v);
+    d.shot.pct=((lo+hi)/2+1)/vals.length*100;});
+})();
+function renderShooting(){
+  const rows=poolFor('shoot').filter(d=>d.shot)
+    .sort((a,b)=>b.shot.shots-a.shot.shots||b.shot.goals-a.shot.goals).slice(0,SECVIEW.shoot==='teams'?13:16);
+  const box=document.getElementById('shooting');box.innerHTML='';
+  if(!rows.length){box.appendChild(el('div',{class:'caption',text:'No sampled shooters in this filter.'}));return;}
+  const max=rows[0].shot.shots;
+  rows.forEach(d=>{
+    const sh=d.shot;const row=el('div',{class:'sh-row'});
+    row.appendChild(el('div',{class:'sh-lab'},[avatar(d,26),el('span',{text:d.player_short_name})]));
+    const bar=el('div',{class:'sh-bar'});
+    const tip=ev=>showTip(`<b>${d.player_short_name}</b><div class="pos">${d.position_group} · ${d.team_short} · ${sh.apps} apps</div>
+      <div class="row"><span>Shots</span><b>${sh.shots}</b></div>
+      <div class="row"><span>Goals</span><b>${sh.goals}</b></div>
+      <div class="row"><span>Shots / app</span><b>${fmt(sh.shots_per_app)}</b></div>`,ev);
+    const ng=sh.shots-sh.goals;
+    if(ng>0){const s1=el('div',{class:'sh-seg'});s1.style.width=(ng/max*100)+'%';s1.style.background='var(--c1)';
+      s1.addEventListener('mouseenter',tip);s1.addEventListener('mousemove',moveTip);s1.addEventListener('mouseleave',hideTip);bar.appendChild(s1);}
+    if(sh.goals>0){const s2=el('div',{class:'sh-seg'});s2.style.width=(sh.goals/max*100)+'%';s2.style.background='var(--good)';
+      s2.addEventListener('mouseenter',tip);s2.addEventListener('mousemove',moveTip);s2.addEventListener('mouseleave',hideTip);bar.appendChild(s2);}
+    row.appendChild(bar);
+    row.appendChild(el('div',{class:'sh-val',html:`${sh.shots}${sh.goals?` · <span class="g">${sh.goals}G</span>`:''}`}));
+    row.onclick=()=>{document.getElementById('playerSelect').value=d.player_id;renderProfile();
+      document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});};
+    box.appendChild(row);
+  });
+  document.getElementById('shotLegend').innerHTML=
+    `<span class="item"><span class="swatch" style="background:var(--c1)"></span>Shots</span>
+     <span class="item"><span class="swatch" style="background:var(--good)"></span>Goals</span>
+     <span class="item" style="color:var(--muted)">click a player for their profile</span>`;
+}
+
+// ---------- COMPARE RADAR (follows the global Players/Teams view) ----------
+function fillRadarPickers(){
+  const A=document.getElementById('radarA'),B=document.getElementById('radarB');A.innerHTML='';B.innerHTML='';
+  const team=SECVIEW.radar==='teams';const universe=team?teamEntities():DATA;
+  [...universe].sort((a,b)=>a.player_name.localeCompare(b.player_name)).forEach(d=>{
+    const txt=team?d.player_name:`${d.player_name} — ${d.team_short}`;
+    A.appendChild(el('option',{value:d.player_id,text:txt}));B.appendChild(el('option',{value:d.player_id,text:txt}));});
+  if(team){A.value=universe[0].player_id;B.value=universe[1].player_id;}
+  else{const wa=DATA.find(d=>d.position_group==='Wide Attacker'&&d.shot);
+    const cd=DATA.find(d=>d.position_group==='Central Defender'&&d.shot);
+    A.value=(wa||DATA[0]).player_id;B.value=(cd||DATA[1]).player_id;}
+}
+function radarEntity(sel){
+  const v=document.getElementById(sel).value;
+  const universe=SECVIEW.radar==='teams'?teamEntities():DATA;
+  const d=universe.find(x=>String(x.player_id)===String(v));
+  return d?{label:d.player_name,sub:d.isTeam?'team squad':d.position_group,silo:s=>d['silo__'+s]}:null;
+}
+function initRadar(){
+  fillRadarPickers();
+  document.getElementById('radarA').onchange=renderRadar;
+  document.getElementById('radarB').onchange=renderRadar;
+}
+function renderRadar(){
+  const names=activeNames();
+  const A=radarEntity('radarA'), B=radarEntity('radarB');
+  const svg=document.getElementById('radar');svg.textContent='';
+  const W=Math.min(svg.parentElement.clientWidth||460,520),H=W,cx=W/2,cy=H/2,R=W*0.30;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const n=names.length,ang=i=>-Math.PI/2+i*2*Math.PI/n;
+  const pt=(i,r)=>[cx+Math.cos(ang(i))*r*R/100,cy+Math.sin(ang(i))*r*R/100];
+  // rings
+  [25,50,75,100].forEach(rr=>{
+    let pts=names.map((_,i)=>pt(i,rr).map(v=>v.toFixed(1)).join(',')).join(' ');
+    svg.appendChild(S('polygon',{points:pts,fill:'none',stroke:'var(--grid)','stroke-width':1}));
+  });
+  names.forEach((s,i)=>{
+    const [x,y]=pt(i,100);
+    svg.appendChild(S('line',{x1:cx,y1:cy,x2:x.toFixed(1),y2:y.toFixed(1),stroke:'var(--grid)','stroke-width':1}));
+    const [lx,ly]=pt(i,116);
+    svg.appendChild(S('text',{x:lx.toFixed(1),y:ly.toFixed(1),'text-anchor':Math.abs(lx-cx)<8?'middle':(lx>cx?'start':'end'),
+      'dominant-baseline':'middle',class:'axis',style:`fill:${SILO_COLORS[s]};font-weight:700;font-size:10px`,text:s.toUpperCase()}));
+  });
+  [[A,'var(--c1)'],[B,'var(--c2)']].forEach(([d,col])=>{
+    if(!d)return;
+    const pts=names.map((s,i)=>{const v=d.silo(s);return pt(i,v==null?0:v);});
+    const poly=pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
+    svg.appendChild(S('polygon',{points:poly,fill:col,'fill-opacity':.14,stroke:col,'stroke-width':2.4,'stroke-linejoin':'round'}));
+    pts.forEach((p,i)=>{const v=d.silo(names[i]);if(v==null)return;
+      const c=S('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:3.5,fill:col});
+      c.addEventListener('mouseenter',ev=>showTip(`<b>${d.label}</b><div class="pos">${names[i]}</div>
+        <div class="row"><span>${SECVIEW.radar==='teams'?'Team silo':'Percentile'}</span><b>${fmt(v,0)}</b></div>`,ev));
+      c.addEventListener('mousemove',moveTip);c.addEventListener('mouseleave',hideTip);svg.appendChild(c);});
+  });
+  // legend
+  const leg=[[A,'var(--c1)'],[B,'var(--c2)']].filter(([d])=>d).map(([d,col])=>
+    `<span class="item"><span class="swatch" style="background:${col}"></span>${d.label} · ${d.sub}</span>`).join('');
+  let host=document.getElementById('radarLegend');
+  if(!host){host=el('div',{class:'legend',id:'radarLegend',style:'margin-top:10px'});
+    document.querySelector('#compare-section .card').appendChild(host);}
+  host.innerHTML=leg;
+}
+
+// ---------- SCATTER EXPLORER (one dot per player) ----------
+const POS_COLOR={'Central Defender':'var(--c2)','Full Back':'var(--c1)','Midfield':'var(--c3)',
+  'Wide Attacker':'var(--c5)','Center Forward':'var(--c6)','Team':'var(--c7)'};
+let xpTab='All';                 // silo filter for the axis menus ('All' or a silo name)
+let xpX='top_speed',xpY='takeons';  // current axes (persist across tab switches)
+function renderXpTabs(){
+  const host=document.getElementById('xpTabs');host.innerHTML='';
+  ['All',...ALL_NAMES].forEach(t=>{
+    const b=el('button',{class:'stab'+(xpTab===t?' active':''),text:t});
+    if(t!=='All'){b.style.setProperty('--tabc',SILO_COLORS[t]);if(SAMPLE_NAMES.includes(t))b.classList.add('samp');}
+    b.onclick=()=>{xpTab=t;fillExploreOptions();};
+    host.appendChild(b);
+  });
+}
+function fillAxis(id,key){
+  const sel=document.getElementById(id);sel.innerHTML='';
+  const inTab=xpTab==='All'||METRIC_BY_KEY[key].silo===xpTab;
+  // keep the current axis visible even when it's outside the active silo tab
+  if(!inTab){const cm=METRIC_BY_KEY[key];sel.appendChild(el('option',{value:cm.key,text:cm.label+' — '+cm.silo+' (current)'}));}
+  if(xpTab==='All'){
+    ALL_NAMES.forEach(s=>{const ms=METRICS.filter(m=>m.silo===s);if(!ms.length)return;const og=el('optgroup',{label:s});
+      ms.forEach(m=>og.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));sel.appendChild(og);});
+  }else{
+    METRICS.filter(m=>m.silo===xpTab).forEach(m=>sel.appendChild(el('option',{value:m.key,text:m.label+(m.src==='sample'?' *':'')})));
+  }
+  sel.value=key;
+}
+function fillExploreOptions(){
+  renderXpTabs();fillAxis('xpX',xpX);fillAxis('xpY',xpY);
+}
+function initExplore(){
+  fillExploreOptions();
+  document.getElementById('xpX').onchange=e=>{xpX=e.target.value;renderExplore();};
+  document.getElementById('xpY').onchange=e=>{xpY=e.target.value;renderExplore();};
+  document.getElementById('xpSwap').onclick=()=>{const t=xpX;xpX=xpY;xpY=t;fillExploreOptions();renderExplore();};
+}
+function openCardFor(d){if(d.isTeam)return;const s=document.getElementById('playerSelect');
+  if(![...s.options].some(o=>String(o.value)===String(d.player_id)))return;
+  SECVIEW.profile='players';
+  [...document.querySelectorAll('#view-profile .vseg button')].forEach(b=>b.setAttribute('aria-pressed',b.textContent==='Players'));
+  buildProfileOptions();selectPlayer(d.player_id);
+  document.getElementById('pf-section').scrollIntoView({behavior:'smooth',block:'start'});}
+function renderExplore(){
+  const xk=xpX,yk=xpY;
+  const mx=METRIC_BY_KEY[xk],my=METRIC_BY_KEY[yk];const team=SECVIEW.explore==='teams';
+  const rows=poolFor('explore').filter(d=>metricVal(d,xk)!=null&&metricVal(d,yk)!=null);
+  // label the standout players so the plot reads by-player, not as an anonymous cloud
+  const yBetter=my&&my.better===-1?-1:1, xBetter=mx&&mx.better===-1?-1:1;
+  const labelled=[...rows].sort((a,b)=>
+    (yBetter*(metricVal(b,yk)-metricVal(a,yk)))+(xBetter*(metricVal(b,xk)-metricVal(a,xk)))*0).slice(0,7);
+  scatter('explore',rows,{
+    x:d=>metricVal(d,xk),y:d=>metricVal(d,yk),
+    xlab:(mx?mx.label:xk)+' →',ylab:(my?my.label:yk)+' →',
+    fill:d=>team?'var(--series-1)':(POS_COLOR[d.position_group]||'var(--series-1)'),
+    label:()=>labelled,
+    onclick:d=>openCardFor(d),
+    tip:d=>`<b>${d.player_short_name}</b><div class="pos">${d.isTeam?d.players+' players':d.position_group+' · '+d.team_short}</div>
+      <div class="row"><span>${my?my.label:yk}</span><b>${fmtMetric(yk,metricVal(d,yk))}</b></div>
+      <div class="row"><span>${mx?mx.label:xk}</span><b>${fmtMetric(xk,metricVal(d,xk))}</b></div>`
+  });
+  const anySample=(mx&&mx.src==='sample')||(my&&my.src==='sample');
+  document.getElementById('xpCap').textContent=
+    `${rows.length} ${team?'teams':'players'} · one dot each · click to open a card`+(anySample?' · * = 10-match sample metric':'');
+  document.getElementById('xpLegend').innerHTML=(!team)
+    ?META.positions.map(p=>`<span class="item"><span class="swatch" style="background:${POS_COLOR[p]||'var(--series-1)'}"></span>${p}</span>`).join('')
+    :'<span class="item">Each dot = one team</span>';
+}
+
+// ---------- ACTION HEAT-MAPS ----------
+let hmLayer='touch';
+const LAYER_LABEL={touch:'Touches',defend:'Defending',run:'Runs'};
+const LAYER_RAMP={touch:['--c1'],defend:['--c7'],run:['--c5']};
+// single-entity view — list every sampled player/team with a grid (ignore the position filter)
+function heatPool(){return (SECVIEW.heat==='teams'?teamEntities():DATA).filter(d=>d.shot&&d.shot.grid);}
+function buildHeatOptions(){
+  const sel=document.getElementById('hmSelect'),dl=document.getElementById('hmList');
+  const cur=sel.value;sel.innerHTML='';dl.innerHTML='';
+  const team=SECVIEW.heat==='teams';
+  const rows=[...heatPool()].sort((a,b)=>a.player_name.localeCompare(b.player_name));
+  rows.forEach(d=>{sel.appendChild(el('option',{value:d.player_id,text:team?d.player_name:`${d.player_name} — ${d.team_short}`}));
+    dl.appendChild(el('option',{value:d.player_name}));});
+  if(cur&&[...sel.options].some(o=>String(o.value)===String(cur)))sel.value=cur;
+  else if(rows.length)sel.value=rows.sort((a,b)=>((b.shot.grid.touch||[]).reduce((x,y)=>x+y,0))-((a.shot.grid.touch||[]).reduce((x,y)=>x+y,0)))[0].player_id;
+  document.getElementById('hmSearch').placeholder=team?'Search team…':'Search player…';
+  // layer segmented control
+  const lay=document.getElementById('hmLayers');lay.innerHTML='';
+  SAMPLE_META.layers.forEach(L=>{const b=el('button',{text:LAYER_LABEL[L]||L,'aria-pressed':String(hmLayer===L)});
+    b.onclick=()=>{hmLayer=L;[...lay.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===b));renderHeat();};
+    lay.appendChild(b);});
+}
+function initHeat(){
+  buildHeatOptions();
+  document.getElementById('hmSelect').onchange=renderHeat;
+  const s=document.getElementById('hmSearch');
+  s.oninput=()=>{const q=s.value.trim().toLowerCase();if(!q)return;
+    const hit=heatPool().find(d=>d.player_name.toLowerCase().includes(q));
+    if(hit){document.getElementById('hmSelect').value=hit.player_id;renderHeat();}};
+}
+function renderHeat(){
+  const sel=document.getElementById('hmSelect');const pool=heatPool();
+  const d=pool.find(p=>String(p.player_id)===String(sel.value))||pool[0];
+  const svg=document.getElementById('heat');svg.textContent='';
+  const cap=document.getElementById('hmCap');
+  if(!d){cap.textContent='No sampled players in this view.';return;}
+  const cols=SAMPLE_META.grid_cols,rows=SAMPLE_META.grid_rows;
+  const grid=(d.shot.grid&&d.shot.grid[hmLayer])||[];
+  const W=Math.min(svg.parentElement.clientWidth||900,760),H=Math.round(W*(rows/cols)*1.02);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('width',W);svg.setAttribute('height',H);
+  const pad=6,cw=(W-2*pad)/cols,ch=(H-2*pad)/rows;
+  const max=Math.max(1,...grid);
+  const base=getComputedStyle(document.documentElement).getPropertyValue(LAYER_RAMP[hmLayer][0]).trim()||'#4477aa';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const v=grid[r*cols+c]||0;const t=v/max;
+    const rect=S('rect',{x:(pad+c*cw).toFixed(1),y:(pad+r*ch).toFixed(1),width:(cw-1).toFixed(1),height:(ch-1).toFixed(1),
+      rx:2,fill:base,'fill-opacity':(0.06+0.9*Math.sqrt(t)).toFixed(3)});
+    if(v>0){rect.addEventListener('mouseenter',ev=>showTip(`<b>${LAYER_LABEL[hmLayer]}</b>: ${v}`,ev));
+      rect.addEventListener('mousemove',moveTip);rect.addEventListener('mouseleave',hideTip);}
+    svg.appendChild(rect);
+  }
+  // pitch furniture: midline + centre circle + attacking-direction arrow
+  const midX=pad+cols/2*cw;
+  svg.appendChild(S('line',{x1:midX.toFixed(1),x2:midX.toFixed(1),y1:pad,y2:H-pad,class:'pitch-line'}));
+  svg.appendChild(S('circle',{cx:midX.toFixed(1),cy:(H/2).toFixed(1),r:Math.min(cw,ch)*1.1,fill:'none',class:'pitch-line'}));
+  svg.appendChild(S('rect',{x:pad,y:pad,width:(W-2*pad).toFixed(1),height:(H-2*pad).toFixed(1),fill:'none',class:'pitch-line'}));
+  svg.appendChild(S('text',{x:W-pad-4,y:H-pad-4,'text-anchor':'end',class:'axis',text:'attack →'}));
+  const total=grid.reduce((a,b)=>a+b,0);
+  cap.textContent=`${d.player_short_name}${d.isTeam?' (squad)':''} · ${LAYER_LABEL[hmLayer]} · ${total} actions across ${d.shot.apps} tracked ${d.shot.apps===1?'match':'matches'} · attacking left → right`;
+}
+
+// ---------- render all ----------
+function renderAll(){renderLeaderboard();renderShooting();renderRadar();renderAthletic();renderPassing();renderRunMix();renderExplore();renderHeat();}
+initProfile();initRadar();initExplore();initHeat();initViewToggles();renderAll();renderProfile();
+addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(renderAll,180);});
+</script>
