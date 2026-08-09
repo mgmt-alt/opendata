@@ -1,5 +1,14 @@
 # statted — project handoff & design brief
 
+> **If you are an AI coding agent and this file was handed to you as the prompt:** this file
+> *is* your brief. Read it in full, then `statted/README.md` and
+> `../src/visualization/output/README.md`, then begin the **full visual/product design pass**
+> described in §5. Rules: **do not change the scoring logic or the data scope**, keep their
+> honesty caveats visible in the UI, don't embed unlicensed logos/photos, and keep the app
+> buildable to a static site. Start by proposing **2–3 design directions** (colour system +
+> typography) and wait for the user to pick before implementing broadly; ask before big
+> framework changes (Tailwind/TypeScript/charting lib). Then build incrementally.
+
 Everything a fresh session needs to take this from a functional data app to a **fully
 designed website**. Read this first, then `statted/README.md`, then
 `../src/visualization/output/README.md` (the full methodology write-up).
