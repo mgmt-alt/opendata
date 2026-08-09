@@ -7,7 +7,7 @@ import { RUN_FAMILIES } from '../lib/constants.js'
 export function RunGlyph({ family, size = 34, weight = 2.4, muted = false, title }) {
   const f = typeof family === 'string' ? RUN_FAMILIES.find((r) => r.key === family) : family
   if (!f) return null
-  const col = muted ? 'var(--line-2)' : `var(${f.cvar})`
+  const col = muted ? 'var(--rule-2)' : `var(${f.cvar})`
   const shaft = SHAFTS[f.key] || SHAFTS.default
   return (
     <svg className="glyph" width={size} height={size} viewBox="0 0 40 40" role="img"

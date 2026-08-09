@@ -25,31 +25,14 @@ const LINKS = [
   ['/compare', 'Compare'],
 ]
 
-// The wordmark carries a tiny run-vector — the atlas mark in miniature.
-function Mark() {
-  return (
-    <svg className="mk" width="26" height="26" viewBox="0 0 40 40" aria-hidden="true">
-      <g fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-        transform="rotate(-22 20 20)">
-        <circle cx="7" cy="20" r="2.4" fill="var(--accent)" stroke="none" />
-        <path d="M7 20 H33" />
-        <path d="M26 14 L34 20 L26 26" />
-      </g>
-    </svg>
-  )
-}
-
 export default function App() {
   return (
     <>
       <header className="masthead">
         <div className="mast-inner">
           <NavLink to="/" className="mast-brand">
-            <Mark />
-            <span>
-              <span className="wm">stat<i>ted</i></span>
-              <span className="tag">Atlas of Movement</span>
-            </span>
+            <span className="wm">stat<i>ted</i></span>
+            <span className="tag">An Atlas of Movement</span>
           </NavLink>
           <nav className="mast-nav">
             {LINKS.map(([to, label, end]) => (

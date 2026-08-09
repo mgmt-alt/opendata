@@ -6,19 +6,26 @@ A-League player & team analytics — a **React + Vite** single-page app built on
 > Staged inside the `opendata` repo for now. Destined for its own private repo
 > **`mgmt-alt/statted`** — move the contents of this folder to the repo root there.
 
-## Design — “An Atlas of Movement”
+## Design — “An Atlas of Movement” (a print annual)
 
-The visual system is **Vector-Field / Terrain**: a Swiss editorial grid crossed with a
-sports-science atlas, where the tracking data *is* the identity rather than chrome around a
-dashboard. Its vocabulary is the six off-ball **run families** — each a direction on the pitch,
-a hue and a job — rendered as directional glyphs (`components/Glyph.jsx`) that recur across the
-site. The landing hero is a live **flow field** of the pitch (`components/VectorField.jsx`,
-`prefers-reduced-motion` aware); pitch geometry, tabular mono numerics and a run-family palette
-carry through every page. The theme is a three-state light/dark token system.
+The site is art-directed as an **editorial print annual**: warm paper and ink, a high-contrast
+display serif over a newspaper text serif, hairline rules, drop caps, ruled **ledger tables**,
+and data set as numbered **plates**. The tracking data *is* the identity — its vocabulary is the
+six off-ball **run families**, each a direction on the pitch, an ink and a job, drawn as
+directional glyphs (`components/Glyph.jsx`) that recur throughout. The landing page is a printed
+**cover**: nameplate, dateline, drop-cap standfirst, a “season in numbers” front plate, Plate I
+of the run families, and a leader-dot **Contents**. Motion is restrained and print-like — blocks
+settle in on scroll and headline figures tally once (`components/Motion.jsx`,
+`prefers-reduced-motion` aware). A three-state light/dark token system gives a paper “day” and a
+warm “night edition”.
 
-Design lives entirely in `styles.css` + the palette/glyph constants in `lib/constants.js`; the
-**scoring model and data scope are unchanged**, and the source's honest limits stay visible in a
-colophon on every page (`components/Colophon.jsx`).
+Type is **Fraunces** (display) + **Newsreader** (text), both SIL Open Font License 1.1,
+subset to Latin and embedded as variable `woff2` **data URIs** in `src/fonts.css` so the build
+is fully self-contained (no external font requests — CSP-safe for a single-file snapshot).
+
+Design lives in `styles.css` + `src/fonts.css` + the palette/glyph constants in `lib/constants.js`;
+the **scoring model and data scope are unchanged**, and the source's honest limits stay visible in
+a colophon on every page (`components/Colophon.jsx`).
 
 ## Pages (one component per graph)
 

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { FiltersProvider } from './lib/store.jsx'
+import './fonts.css'
 import './styles.css'
 
 // HashRouter keeps deep links working on static hosts (GitHub Pages) with no server config.

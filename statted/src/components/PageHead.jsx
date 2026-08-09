@@ -3,7 +3,7 @@
 export default function PageHead({ no, kicker, title, sub, tag }) {
   return (
     <header className="page-head">
-      <div className="eyebrow">{no ? `§ ${no} — ` : ''}{kicker}{tag ? <> &nbsp;<span className="tag-s">{tag}</span></> : null}</div>
+      <div className="eyebrow">{no ? <span className="fol">Plate {no}</span> : null}{kicker}{tag ? <> — <span className="tag-s">{tag}</span></> : null}</div>
       <h1 dangerouslySetInnerHTML={{ __html: title }} />
       {sub && <p className="sub" style={{ marginBottom: 0 }}>{sub}</p>}
     </header>
